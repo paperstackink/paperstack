@@ -1,0 +1,8 @@
+trailingComma: "all"
+tabWidth: 4
+semi: true
+singleQuote: false
+useTabs: false
+quoteProps: "consistent"
+bracketSpacing: true
+arrowParens: "avoid"

@@ -1,0 +1,16 @@
+{
+  "name": "paperstack",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -noEmit && npx ts-node scripts/build.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "esbuild": "^0.18.5",
+    "typescript": "^5.1.3"
+  }
+}
