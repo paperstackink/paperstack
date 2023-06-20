@@ -6,6 +6,9 @@
   "scripts": {
     "build": "tsc -noEmit && npx ts-node scripts/build.ts"
   },
+  "bin": {
+    "paper": "./bin/run"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {
