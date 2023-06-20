@@ -1,1 +1,1 @@
-console.log("INDEX!")
+console.log("INDEX!");
