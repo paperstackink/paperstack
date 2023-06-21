@@ -1,5 +1,5 @@
 {
-  "name": "paperstack",
+  "name": "@paperstack/paperstack",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/lodash": "^4.14.195",
     "@types/node": "^20.3.1",
     "@types/yargs": "^17.0.24",
     "esbuild": "^0.18.5",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "command-line-args": "^5.2.1",
+    "lodash": "^4.17.21",
     "yargs": "^17.7.2"
   }
 }

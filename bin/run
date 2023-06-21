@@ -5,7 +5,6 @@ const { hideBin } = require('yargs/helpers')
 
 const Build = require('../dist/Build.js').default
 
-console.log('ARGUMENTS', Build.command)
 yargs(hideBin(process.argv))
   .command(Build.command, Build.description, () => { }, Build.handle)
   .parse()
