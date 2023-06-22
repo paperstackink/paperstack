@@ -2,12 +2,25 @@
 
 const Help = require('../dist/Help.js').default
 const Build = require('../dist/Build.js').default
+const Version = require('../dist/Version.js').default
 
-const name = process.argv[2] || 'help'
-const arguments = process.argv.slice(3)
+const firstArgument = process.argv[2]
+
+let name = 'root'
+
+// If calling `paper` or `paper --flag` then we still wanna use `root`
+if (firstArgument && !firstArgument.startsWith('-')) {
+  name = firstArgument
+}
+
+// If calling root then there isn't a command name, thus the arguments start earlier
+const arguments = name === 'root'
+  ? process.argv.slice(2)
+  : process.argv.slice(3)
 
 const mapping = {
   'help': Help,
+  'root': Help,
   'build': Build,
 }
 
@@ -19,7 +32,9 @@ if (!command) {
 
 const instance = new command()
 
-if (arguments.some(argument => ['--help', '-h', '-H'].includes(argument))) {
+if (arguments.some(argument => ['--version', '-v', '-V'].includes(argument))) {
+  new Version().handle()
+} else if (arguments.some(argument => ['--help', '-h', '-H'].includes(argument))) {
   instance.help()
 } else {
   instance

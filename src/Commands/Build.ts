@@ -69,7 +69,7 @@ export default class Build extends Command {
             }),
         );
 
-        // Terminal.clear();
+        Terminal.clear();
         Terminal.write("Building site...");
         Terminal.line();
 
