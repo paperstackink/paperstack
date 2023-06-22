@@ -1,14 +1,15 @@
 import * as Path from "@/Utilities/Path";
 import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
+import { Command } from "@/Commands/Command";
 
 import { compile } from "@paperstack/stencil";
 
-export default class Build {
+export default class Build extends Command {
     static command = "build";
     static description = "Build project";
 
-    static async handle() {
+    async handle(): Promise<void> {
         const rootDirectory = Filesystem.getCurrentDirectory();
         const pagesDirectory = Path.buildPath(rootDirectory, "Pages");
         const componentsDirectory = Path.buildPath(rootDirectory, "Components");
@@ -68,7 +69,7 @@ export default class Build {
             }),
         );
 
-        Terminal.clear();
+        // Terminal.clear();
         Terminal.write("Building site...");
         Terminal.line();
 
@@ -89,5 +90,8 @@ export default class Build {
         Terminal.line();
         Terminal.write("Build completed");
     }
-    static async catch() {}
+
+    async catch(): Promise<void> {}
+
+    help(): void {}
 }

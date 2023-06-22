@@ -1,10 +1,30 @@
 #!/usr/bin/env node
 
-const yargs = require('yargs/yargs')
-const { hideBin } = require('yargs/helpers')
-
+const Help = require('../dist/Help.js').default
 const Build = require('../dist/Build.js').default
 
-yargs(hideBin(process.argv))
-  .command(Build.command, Build.description, () => { }, Build.handle)
-  .parse()
+const name = process.argv[2] || 'help'
+const arguments = process.argv.slice(3)
+
+const mapping = {
+  'help': Help,
+  'build': Build,
+}
+
+const command = mapping[name]
+
+if (!command) {
+  throw new Error(`'${name}' is an unknown command. Try running 'paper --help' to see all available commands.`)
+}
+
+const instance = new command()
+
+if (arguments.some(argument => ['--help', '-h', '-H'].includes(argument))) {
+  instance.help()
+} else {
+  instance
+    .handle()
+    .catch(async error => {
+      await command.catch(error)
+    })
+}
