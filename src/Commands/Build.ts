@@ -9,14 +9,24 @@ export default class Build {
     static async handle() {
         const rootDirectory = Filesystem.getCurrentDirectory();
         const pagesDirectory = Path.buildPath(rootDirectory, "Pages");
+        const componentsDirectory = Path.buildPath(rootDirectory, "Components");
         const outputDirectory = Path.buildPath(rootDirectory, "Output");
         const pages = await Filesystem.files(pagesDirectory);
 
         const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
+        const componentsDirectoryExists = await Filesystem.exists(
+            componentsDirectory,
+        );
 
         if (!pagesDirectoryExists) {
             throw new Error(
                 "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
+            );
+        }
+
+        if (!componentsDirectoryExists) {
+            throw new Error(
+                "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
             );
         }
 
@@ -49,10 +59,19 @@ export default class Build {
             };
         });
 
+        const componentFiles = await Filesystem.files(componentsDirectory);
+        const components = Object.fromEntries(
+            componentFiles.map(file => {
+                return [file.name, file.contents];
+            }),
+        );
+
         pagesMappedToOutput.forEach(async page => {
             await Filesystem.createDirectory(page.directory);
 
-            const compiledContents = await compile(page.contents);
+            const compiledContents = await compile(page.contents, {
+                components,
+            });
 
             await Filesystem.writeFile(page.path, compiledContents);
         });
