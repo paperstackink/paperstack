@@ -1,3 +1,11 @@
-export function write(input: string): void {
-    console.log("WRITING:", input);
+export function write(...inputs: string[]): void {
+    console.log(...inputs);
+}
+
+export function clear(): void {
+    console.clear();
+}
+
+export function line(): void {
+    console.log();
 }

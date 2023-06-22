@@ -1,5 +1,7 @@
-import * as Filesystem from "@/Utilities/Filesystem";
 import * as Path from "@/Utilities/Path";
+import * as Terminal from "@/Utilities/Terminal";
+import * as Filesystem from "@/Utilities/Filesystem";
+
 import { compile } from "@paperstack/stencil";
 
 export default class Build {
@@ -66,9 +68,9 @@ export default class Build {
             }),
         );
 
-        console.clear();
-        console.log("Building site...");
-        console.log();
+        Terminal.clear();
+        Terminal.write("Building site...");
+        Terminal.line();
 
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
@@ -79,13 +81,13 @@ export default class Build {
 
             await Filesystem.writeFile(page.path, compiledContents);
 
-            console.log("✓", page.path);
+            Terminal.write("✓", page.path);
         });
 
         await Promise.all(promises);
 
-        console.log();
-        console.log("Build completed");
+        Terminal.line();
+        Terminal.write("Build completed");
     }
     static async catch() {}
 }
