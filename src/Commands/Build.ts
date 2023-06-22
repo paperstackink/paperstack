@@ -93,5 +93,21 @@ export default class Build extends Command {
 
     async catch(): Promise<void> {}
 
-    help(): void {}
+    help(): void {
+        Terminal.clear();
+        Terminal.write("Usage: paper build");
+        Terminal.line();
+
+        Terminal.write(
+            "This command builds a production-ready version of your site. The files are placed in 'Output'.",
+        );
+        Terminal.line();
+
+        Terminal.write("Options: This command has no options");
+        Terminal.line();
+
+        Terminal.write(
+            "Note: This command should be run from the root of your project",
+        );
+    }
 }
