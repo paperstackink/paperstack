@@ -66,7 +66,11 @@ export default class Build {
             }),
         );
 
-        pagesMappedToOutput.forEach(async page => {
+        console.clear();
+        console.log("Building site...");
+        console.log();
+
+        const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
 
             const compiledContents = await compile(page.contents, {
@@ -74,7 +78,14 @@ export default class Build {
             });
 
             await Filesystem.writeFile(page.path, compiledContents);
+
+            console.log("✓", page.path);
         });
+
+        await Promise.all(promises);
+
+        console.log();
+        console.log("Build completed");
     }
     static async catch() {}
 }
