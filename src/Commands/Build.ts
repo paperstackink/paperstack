@@ -1,38 +1,24 @@
 import * as Filesystem from "@/Utilities/Filesystem";
 import * as Path from "@/Utilities/Path";
-
-// type Flag = {
-//     name: string;
-//     aliases: string[];
-//     required: boolean;
-// };
-
-// type Flags = {
-//     [name: string]: Flag;
-// };
-
-// type Parameter = {
-//     key: string;
-//     required: boolean;
-//     default: string;
-// };
-
-// type Parameters = {
-//     [name: string]: Parameter;
-// };
-//
+import { compile } from "@paperstack/stencil";
 
 export default class Build {
     static command = "build";
     static description = "Build project";
-    // static flags: Flags = [];
-    // static parameters: Parameters = [];
 
     static async handle() {
         const rootDirectory = Filesystem.getCurrentDirectory();
         const pagesDirectory = Path.buildPath(rootDirectory, "Pages");
         const outputDirectory = Path.buildPath(rootDirectory, "Output");
         const pages = await Filesystem.files(pagesDirectory);
+
+        const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
+
+        if (!pagesDirectoryExists) {
+            throw new Error(
+                "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
+            );
+        }
 
         await Filesystem.removeDirectory(outputDirectory);
         await Filesystem.createDirectory(outputDirectory);
@@ -66,7 +52,9 @@ export default class Build {
         pagesMappedToOutput.forEach(async page => {
             await Filesystem.createDirectory(page.directory);
 
-            await Filesystem.writeFile(page.path, page.contents);
+            const compiledContents = await compile(page.contents);
+
+            await Filesystem.writeFile(page.path, compiledContents);
         });
     }
     static async catch() {}

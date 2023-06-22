@@ -75,3 +75,13 @@ export async function removeDirectory(path: string): Promise<void> {
 export async function createDirectory(path: string): Promise<void> {
     await fs.mkdir(path, { recursive: true });
 }
+
+export async function exists(path: string): Promise<boolean> {
+    try {
+        await fs.access(path);
+
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
