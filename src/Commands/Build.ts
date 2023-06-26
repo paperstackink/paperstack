@@ -15,6 +15,7 @@ export default class Build extends Command {
 
     async handle({ output = true }: Options): Promise<void> {
         const pagesDirectory = Path.getPagesDirectory();
+        const assetsDirectory = Path.getAssetsDirectory();
         const componentsDirectory = Path.getComponentsDirectory();
         const outputDirectory = Path.getOutputDirectory();
         const pages = await Filesystem.files(pagesDirectory);
@@ -93,6 +94,13 @@ export default class Build extends Command {
         });
 
         await Promise.all(promises);
+
+        await Filesystem.copyDirectoryContents(
+            assetsDirectory,
+            outputDirectory,
+        );
+
+        Terminal.write("✓", "Copied assets");
 
         if (output) {
             Terminal.line();

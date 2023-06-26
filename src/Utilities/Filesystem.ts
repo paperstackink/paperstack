@@ -81,3 +81,10 @@ export async function exists(path: string): Promise<boolean> {
         return false;
     }
 }
+
+export async function copyDirectoryContents(
+    input: string,
+    output: string,
+): Promise<void> {
+    await fs.cp(input, output, { recursive: true });
+}
