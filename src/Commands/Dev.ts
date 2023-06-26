@@ -8,7 +8,8 @@ import { isFinite } from "lodash";
 
 async function startServer(port: string) {
     await new Build().handle({ output: false });
-    return exec(`http-server Output --port ${port} -c-1`);
+
+    return exec(`./node_modules/.bin/http-server Output --port ${port} -c-1`);
 }
 
 function logReadyMessage(port: string) {
