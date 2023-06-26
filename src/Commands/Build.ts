@@ -100,7 +100,9 @@ export default class Build extends Command {
             outputDirectory,
         );
 
-        Terminal.write("✓", "Copied assets");
+        if (output) {
+            Terminal.write("✓", "Copied assets");
+        }
 
         if (output) {
             Terminal.line();
