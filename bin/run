@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const Dev = require('../dist/Dev.js').default
 const Help = require('../dist/Help.js').default
 const Build = require('../dist/Build.js').default
 const Version = require('../dist/Version.js').default
@@ -19,6 +20,7 @@ const arguments = name === 'root'
   : process.argv.slice(3)
 
 const mapping = {
+  'dev': Dev,
   'help': Help,
   'root': Help,
   'build': Build,
@@ -38,8 +40,8 @@ if (arguments.some(argument => ['--version', '-v', '-V'].includes(argument))) {
   instance.help()
 } else {
   instance
-    .handle()
+    .handle({ arguments })
     .catch(async error => {
-      await command.catch(error)
+      await instance.catch(error)
     })
 }

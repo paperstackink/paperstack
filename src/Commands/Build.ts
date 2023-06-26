@@ -5,15 +5,18 @@ import { Command } from "@/Commands/Command";
 
 import { compile } from "@paperstack/stencil";
 
+type Options = {
+    output?: boolean;
+};
+
 export default class Build extends Command {
     static command = "build";
     static description = "Build project";
 
-    async handle(): Promise<void> {
-        const rootDirectory = Filesystem.getCurrentDirectory();
-        const pagesDirectory = Path.buildPath(rootDirectory, "Pages");
-        const componentsDirectory = Path.buildPath(rootDirectory, "Components");
-        const outputDirectory = Path.buildPath(rootDirectory, "Output");
+    async handle({ output = true }: Options): Promise<void> {
+        const pagesDirectory = Path.getPagesDirectory();
+        const componentsDirectory = Path.getComponentsDirectory();
+        const outputDirectory = Path.getOutputDirectory();
         const pages = await Filesystem.files(pagesDirectory);
 
         const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
@@ -69,9 +72,11 @@ export default class Build extends Command {
             }),
         );
 
-        Terminal.clear();
-        Terminal.write("Building site...");
-        Terminal.line();
+        if (output) {
+            Terminal.clear();
+            Terminal.write("Building site...");
+            Terminal.line();
+        }
 
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
@@ -82,13 +87,17 @@ export default class Build extends Command {
 
             await Filesystem.writeFile(page.path, compiledContents);
 
-            Terminal.write("✓", page.path);
+            if (output) {
+                Terminal.write("✓", page.path);
+            }
         });
 
         await Promise.all(promises);
 
-        Terminal.line();
-        Terminal.write("Build completed");
+        if (output) {
+            Terminal.line();
+            Terminal.write("Build completed");
+        }
     }
 
     async catch(): Promise<void> {}

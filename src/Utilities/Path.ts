@@ -1,6 +1,45 @@
 import nodePath from "path";
 import * as Strings from "@/Utilities/Strings";
 
+export function getCurrentDirectory() {
+    return process.cwd();
+}
+
+// Note: This assumes the command is called from the project root
+export function getOutputDirectory() {
+    const root = getCurrentDirectory();
+
+    return buildPath(root, "Output");
+}
+
+// Note: This assumes the command is called from the project root
+export function getPagesDirectory() {
+    const root = getCurrentDirectory();
+
+    return buildPath(root, "Pages");
+}
+
+// Note: This assumes the command is called from the project root
+export function getComponentsDirectory() {
+    const root = getCurrentDirectory();
+
+    return buildPath(root, "Components");
+}
+
+// Note: This assumes the command is called from the project root
+export function getConfigDirectory() {
+    const root = getCurrentDirectory();
+
+    return buildPath(root, "Config");
+}
+
+// Note: This assumes the command is called from the project root
+export function getAssetsDirectory() {
+    const root = getCurrentDirectory();
+
+    return buildPath(root, "Assets");
+}
+
 export function getExtension(path: string): string {
     const extension = nodePath.extname(path);
 

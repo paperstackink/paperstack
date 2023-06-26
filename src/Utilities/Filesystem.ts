@@ -1,10 +1,6 @@
 import fs from "node:fs/promises";
 import * as Path from "@/Utilities/Path";
 
-export function getCurrentDirectory() {
-    return process.cwd();
-}
-
 type File = {
     directory: string;
     name: string;
