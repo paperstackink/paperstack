@@ -7,9 +7,17 @@ import chokidar from "chokidar";
 import { isFinite } from "lodash";
 
 async function startServer(port: string) {
-    await new Build().handle({ output: false });
+    try {
+        await new Build().handle({ output: false });
 
-    return exec(`./node_modules/.bin/http-server Output --port ${port} -c-1`);
+        return exec(
+            `./node_modules/.bin/http-server Output --port ${port} -c-1`,
+        );
+    } catch (error) {
+        console.error(error);
+
+        return null;
+    }
 }
 
 function logReadyMessage(port: string) {
@@ -61,7 +69,10 @@ export default class Dev extends Command {
             ready = true;
 
             process = await startServer(port);
-            logReadyMessage(port);
+
+            if (process) {
+                logReadyMessage(port);
+            }
         });
 
         watcher.on("all", async () => {
@@ -73,7 +84,10 @@ export default class Dev extends Command {
                 Terminal.write("Restarting server...");
 
                 process = await startServer(port);
-                logReadyMessage(port);
+
+                if (process) {
+                    logReadyMessage(port);
+                }
             }
         });
     }
