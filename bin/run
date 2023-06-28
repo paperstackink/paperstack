@@ -41,7 +41,4 @@ if (arguments.some(argument => ['--version', '-v', '-V'].includes(argument))) {
 } else {
   instance
     .handle({ arguments })
-    .catch(async error => {
-      await instance.catch(error)
-    })
 }
