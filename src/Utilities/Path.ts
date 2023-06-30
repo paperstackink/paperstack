@@ -1,41 +1,41 @@
 import nodePath from "path";
 import * as Strings from "@/Utilities/Strings";
 
-export function getCurrentDirectory() {
-    return process.cwd();
+export function getRootDirectory() {
+    return nodePath.resolve(".");
 }
 
 // Note: This assumes the command is called from the project root
 export function getOutputDirectory() {
-    const root = getCurrentDirectory();
+    const root = getRootDirectory();
 
     return buildPath(root, "Output");
 }
 
 // Note: This assumes the command is called from the project root
 export function getPagesDirectory() {
-    const root = getCurrentDirectory();
+    const root = getRootDirectory();
 
     return buildPath(root, "Pages");
 }
 
 // Note: This assumes the command is called from the project root
 export function getComponentsDirectory() {
-    const root = getCurrentDirectory();
+    const root = getRootDirectory();
 
     return buildPath(root, "Components");
 }
 
 // Note: This assumes the command is called from the project root
 export function getConfigDirectory() {
-    const root = getCurrentDirectory();
+    const root = getRootDirectory();
 
     return buildPath(root, "Config");
 }
 
 // Note: This assumes the command is called from the project root
 export function getAssetsDirectory() {
-    const root = getCurrentDirectory();
+    const root = getRootDirectory();
 
     return buildPath(root, "Assets");
 }
