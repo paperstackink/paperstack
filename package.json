@@ -1,8 +1,7 @@
 {
   "name": "@paperstack/paperstack",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "A simple, robust static site generator.",
   "scripts": {
     "prettify": "node_modules/.bin/prettier . --write",
     "build": "rm -rf dist && tsc -noEmit && npx ts-node scripts/build.ts"
@@ -10,8 +9,14 @@
   "bin": {
     "paper": "./bin/run"
   },
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "name": "Bjørn Lindholm",
+    "email": "me@bjornlindholm.com",
+    "url": "https://bjornlindholm.com"
+  },
+  "repository": "https://github.com/paperstackink/paperstack",
+  "homepage": "https://github.com/paperstackink/paperstack",
+  "license": "MIT",
   "devDependencies": {
     "@types/lodash": "^4.14.195",
     "@types/node": "^20.3.1",
