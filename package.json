@@ -14,7 +14,10 @@
     "email": "me@bjornlindholm.com",
     "url": "https://bjornlindholm.com"
   },
-  "repository": "https://github.com/paperstackink/paperstack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paperstackink/paperstack"
+  },
   "homepage": "https://github.com/paperstackink/paperstack",
   "license": "MIT",
   "devDependencies": {
