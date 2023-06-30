@@ -1,6 +1,6 @@
 {
   "name": "@paperstack/paperstack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A simple, robust static site generator.",
   "scripts": {
     "prettify": "node_modules/.bin/prettier . --write",
@@ -9,6 +9,10 @@
   "bin": {
     "paper": "./bin/run"
   },
+  "files": [
+    "dist",
+    "bin"
+  ],
   "author": {
     "name": "Bjørn Lindholm",
     "email": "me@bjornlindholm.com",
