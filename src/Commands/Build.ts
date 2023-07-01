@@ -124,9 +124,5 @@ export default class Build extends Command {
 
         Terminal.write("Options: This command has no options");
         Terminal.line();
-
-        Terminal.write(
-            "Note: This command should be run from the root of your project",
-        );
     }
 }

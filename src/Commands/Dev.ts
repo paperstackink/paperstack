@@ -109,9 +109,5 @@ export default class Dev extends Command {
             `   --port  |  The port to use for the development server`,
         );
         Terminal.line();
-
-        Terminal.write(
-            "Note: This command should be run from the root of your project",
-        );
     }
 }
