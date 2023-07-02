@@ -108,6 +108,5 @@ export default class Dev extends Command {
         Terminal.write(
             `   --port  |  The port to use for the development server`,
         );
-        Terminal.line();
     }
 }

@@ -59,6 +59,12 @@ export function buildPath(...items: string[]): string {
     return nodePath.resolve(...items);
 }
 
+export function buildPathFromRoot(...items: string[]): string {
+    const root = getRootDirectory();
+
+    return nodePath.resolve(root, ...items);
+}
+
 export function concatenate(...items: string[]): string {
     return nodePath.join(...items);
 }

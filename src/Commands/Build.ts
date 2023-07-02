@@ -123,6 +123,5 @@ export default class Build extends Command {
         Terminal.line();
 
         Terminal.write("Options: This command has no options");
-        Terminal.line();
     }
 }
