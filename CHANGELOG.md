@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2023-07-02
+
+### Added
+
+Added a new 'create' command
+
 
 ## [0.1.2] - 2023-06-30
 
