@@ -12,9 +12,19 @@ The plan is to make Paperstack a 'batteries-included' static site generator. In 
 
 Make sure you have `node@20.1` or higher installed.
 
-Run `npx @paperstack/paperstack create my-site`. This will create a new project in the `my-site` directory.
+Run the following command:
 
-Then run `cd my-site && npm run dev` to start a local development server.
+```
+npx @paperstack/paperstack create my-site
+```
+
+This will create a new project in the `my-site` directory.
+
+Then run the following command to start a local server:
+
+```
+cd my-site && npm run dev
+```
 
 ## Pages
 
