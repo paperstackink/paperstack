@@ -23,12 +23,8 @@ export default class Help extends Command {
             `   paper build           |  Build the site for production`,
         );
         Terminal.write(`   paper create          |  Create a new project`);
+        Terminal.write(`   paper make:page       |  Create a new page`);
         Terminal.write(`   paper make:component  |  Create a new component`);
-        Terminal.line();
-
-        Terminal.write(
-            "Note: It's important that you run 'dev' and 'build' from the root of your project",
-        );
     }
 
     async catch(): Promise<void> {}

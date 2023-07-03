@@ -67,5 +67,9 @@ export default class MakeComponent extends Command {
 
         Terminal.write("Parameters: This command has 1 parameter");
         Terminal.write(`   path  |  The path to the new component`);
+        Terminal.line();
+
+        Terminal.write("Examples: ");
+        Terminal.write(`   paper make:component UI/Button`);
     }
 }

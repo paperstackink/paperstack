@@ -98,5 +98,11 @@ export default class MakePage extends Command {
         Terminal.write(
             `   path  |  The path to the new page or the URL of the new page`,
         );
+        Terminal.line();
+
+        Terminal.write("Examples: ");
+        Terminal.write(`   paper make:page /articles/how-to`);
+        Terminal.write(`   paper make:page Articles/HowTo`);
+        Terminal.write(`   paper make:page Articles/HowTo --layout=BaseLayout`);
     }
 }
