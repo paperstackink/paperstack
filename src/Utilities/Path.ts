@@ -48,7 +48,12 @@ export function getExtension(path: string): string {
 
 export function getFileName(path: string): string {
     const extension = getExtension(path);
+
     return nodePath.basename(path, `.${extension}`);
+}
+
+export function getDirectory(path: string): string {
+    return nodePath.dirname(path);
 }
 
 export function buildFileName(name: string, extension: string): string {

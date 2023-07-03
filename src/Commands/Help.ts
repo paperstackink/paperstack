@@ -16,9 +16,14 @@ export default class Help extends Command {
         Terminal.line();
 
         Terminal.write("Available commands:");
-        Terminal.write(`   paper dev     |  Start a development server`);
-        Terminal.write(`   paper build   |  Build the site for production`);
-        Terminal.write(`   paper create  |  Create a new project`);
+        Terminal.write(
+            `   paper dev             |  Start a development server`,
+        );
+        Terminal.write(
+            `   paper build           |  Build the site for production`,
+        );
+        Terminal.write(`   paper create          |  Create a new project`);
+        Terminal.write(`   paper make:component  |  Create a new component`);
         Terminal.line();
 
         Terminal.write(
