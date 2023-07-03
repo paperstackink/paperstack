@@ -50,18 +50,36 @@ export default class MakePage extends Command {
 
         path = Path.buildPathFromRoot(path);
 
-        console.log("PATH", path);
-
         if (await Filesystem.exists(path)) {
             Terminal.error(`'${relativePath}' already exists`);
 
             return;
         }
 
+        let content = "";
+
+        if (options.some(piece => piece.includes("--layout"))) {
+            const layoutFlagIndex = options.findIndex(piece =>
+                piece.includes("--layout"),
+            );
+
+            let layoutName = "";
+
+            if (options[layoutFlagIndex].includes("=")) {
+                layoutName = Strings.after(options[layoutFlagIndex], "=");
+            } else if (options.length >= layoutFlagIndex + 1) {
+                layoutName = options[layoutFlagIndex + 1];
+            }
+
+            if (layoutName) {
+                content = `<${layoutName}>\n    \n</${layoutName}>`;
+            }
+        }
+
         const directory = Path.getDirectory(path);
 
         Filesystem.createDirectory(directory);
-        Filesystem.writeFile(path, "");
+        Filesystem.writeFile(path, content);
 
         Terminal.write(`'${relativePath}' was created`);
     }

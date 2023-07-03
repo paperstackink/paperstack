@@ -16,3 +16,7 @@ export function pascal(input: string): string {
 export function prepend(input: string, prepend: string): string {
     return prepend + input;
 }
+
+export function after(input: string, character: string): string {
+    return input.slice(input.indexOf(character) + 1);
+}
