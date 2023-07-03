@@ -5,6 +5,7 @@ const Help = require('../dist/Help.js').default
 const Build = require('../dist/Build.js').default
 const Create = require('../dist/Create.js').default
 const Version = require('../dist/Version.js').default
+const MakePage = require('../dist/MakePage.js').default
 const MakeComponent = require('../dist/MakeComponent.js').default
 
 const firstArgument = process.argv[2]
@@ -27,6 +28,7 @@ const mapping = {
   'root': Help,
   'build': Build,
   'create': Create,
+  'make:page': MakePage,
   'make:component': MakeComponent,
 }
 
