@@ -40,6 +40,13 @@ export default class MakeComponent extends Command {
         path = path.slice(1);
 
         path = Path.buildPathFromRoot(path);
+
+        if (await Filesystem.exists(path)) {
+            Terminal.error(`'${relativePath}' already exists`);
+
+            return;
+        }
+
         const directory = Path.getDirectory(path);
 
         Filesystem.createDirectory(directory);
