@@ -54,7 +54,7 @@ export default class Create extends Command {
         Terminal.write("This command creates a new project.");
         Terminal.line();
 
-        Terminal.write("Options: This command has no options");
+        Terminal.write("Parameters: This command has 1 parameter");
         Terminal.write(`   path  |  The path to the new project`);
     }
 }

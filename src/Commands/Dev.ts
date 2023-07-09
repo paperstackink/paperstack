@@ -27,7 +27,7 @@ function logReadyMessage(port: string) {
 }
 
 type Options = {
-    arguments: string[];
+    options: string[];
 };
 
 export default class Dev extends Command {
@@ -39,12 +39,12 @@ export default class Dev extends Command {
         Terminal.write("Starting dev server...");
 
         let port = "8080";
-        const portFlagArgumentPosition = options.arguments.findIndex(argument =>
+        const portFlagArgumentPosition = options.options.findIndex(argument =>
             ["--port", "-p", "-P"].includes(argument),
         );
 
         if (portFlagArgumentPosition !== -1) {
-            const portValue = options.arguments[portFlagArgumentPosition + 1];
+            const portValue = options.options[portFlagArgumentPosition + 1];
 
             if (portValue && isFinite(Number(portValue))) {
                 port = portValue;

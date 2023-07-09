@@ -16,14 +16,15 @@ export default class Help extends Command {
         Terminal.line();
 
         Terminal.write("Available commands:");
-        Terminal.write(`   paper dev     |  Start a development server`);
-        Terminal.write(`   paper build   |  Build the site for production`);
-        Terminal.write(`   paper create  |  Create a new project`);
-        Terminal.line();
-
         Terminal.write(
-            "Note: It's important that you run 'dev' and 'build' from the root of your project",
+            `   paper dev             |  Start a development server`,
         );
+        Terminal.write(
+            `   paper build           |  Build the site for production`,
+        );
+        Terminal.write(`   paper create          |  Create a new project`);
+        Terminal.write(`   paper make:page       |  Create a new page`);
+        Terminal.write(`   paper make:component  |  Create a new component`);
     }
 
     async catch(): Promise<void> {}
