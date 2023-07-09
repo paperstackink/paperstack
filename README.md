@@ -169,6 +169,20 @@ You can manually merge attributes passed in with attributes on the root element:
 </button>
 ```
 
+### Directives
+
+You can conditionally add content with the `@if` directive:
+
+```
+<button>
+    @if(variant equals "primary")
+        <Icon name="Checkmark" />
+    @endif
+
+    <slot />
+</button>
+```
+
 ### Expressions
 
 Anything inside brackets (`{{` and `}}`) are expressions.
