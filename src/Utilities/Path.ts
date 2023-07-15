@@ -74,8 +74,12 @@ export function concatenate(...items: string[]): string {
     return nodePath.join(...items);
 }
 
-export function subtract(path: string, segment: string) {
-    const relativePath = path.replace(segment, "");
+export function subtract(path: string, ...segments: string[]) {
+    let relativePath = path;
+
+    segments.forEach(segment => {
+        relativePath = relativePath.replace(segment, "");
+    });
 
     if (relativePath === "") {
         return "/";

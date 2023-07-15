@@ -2,8 +2,10 @@ import * as Path from "@/Utilities/Path";
 import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
+import { set } from "lodash";
 
 import { compile } from "@paperstack/stencil";
+import { mapFromObject } from "@/Utilities/Helpers";
 
 type Options = {
     output?: boolean;
@@ -56,9 +58,15 @@ export default class Build extends Command {
                 directory,
                 Path.buildFileName(name, "html"),
             );
+            const sourceFile = Path.subtract(
+                file.path,
+                pagesDirectory,
+                ".stencil",
+            );
 
             return {
                 ...file,
+                sourceFile,
                 directory,
                 path,
                 name,
@@ -79,11 +87,42 @@ export default class Build extends Command {
             Terminal.line();
         }
 
+        let $scope = new Map();
+
+        const pagesObject = pagesMappedToOutput.reduce((object, item) => {
+            const path = Path.subtract(
+                item.path,
+                outputDirectory,
+                "index.html",
+            );
+            const slug =
+                path
+                    .split("/")
+                    .filter(piece => piece)
+                    .pop() || "";
+
+            const file = new Map();
+
+            file.set("path", path);
+            file.set("slug", slug);
+
+            const nestedPath = item.sourceFile
+                .replace("/", "")
+                .replaceAll("/", ".");
+
+            return set(object, nestedPath, file);
+        }, {} as {});
+
+        $scope.set("$pages", mapFromObject(pagesObject));
+
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
 
             const compiledContents = await compile(page.contents, {
                 components,
+                environment: {
+                    $pages: $scope.get("$pages"),
+                },
             });
 
             await Filesystem.writeFile(page.path, compiledContents);

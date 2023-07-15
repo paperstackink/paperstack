@@ -14,5 +14,8 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "lib": [
+      "es2021"
+    ]
   }
 }
