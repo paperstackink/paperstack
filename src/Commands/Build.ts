@@ -3,6 +3,7 @@ import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 import { set } from "lodash";
+import { isPlainObject } from "lodash";
 
 import { compile } from "@paperstack/stencil";
 import { mapFromObject } from "@/Utilities/Helpers";
@@ -89,29 +90,49 @@ export default class Build extends Command {
 
         let $scope = new Map();
 
-        const pagesObject = pagesMappedToOutput.reduce((object, item) => {
-            const path = Path.subtract(
-                item.path,
-                outputDirectory,
-                "index.html",
-            );
-            const slug =
-                path
-                    .split("/")
-                    .filter(piece => piece)
-                    .pop() || "";
+        let pagesObject = pagesMappedToOutput.reduce(
+            (object, item) => {
+                const path = Path.subtract(
+                    item.path,
+                    outputDirectory,
+                    "index.html",
+                );
+                const slug =
+                    path
+                        .split("/")
+                        .filter(piece => piece)
+                        .pop() || "";
 
-            const file = new Map();
+                const file = new Map();
 
-            file.set("path", path);
-            file.set("slug", slug);
+                file.set("path", path);
+                file.set("slug", slug);
+                file.set("type", "page");
 
-            const nestedPath = item.sourceFile
-                .replace("/", "")
-                .replaceAll("/", ".");
+                const nestedPath = item.sourceFile
+                    .replace("/", "")
+                    .replaceAll("/", ".");
 
-            return set(object, nestedPath, file);
-        }, {} as {});
+                return set(object, nestedPath, file);
+            },
+            {} as {},
+        );
+
+        // Add 'type: directory' to all objects and nested objects
+        pagesObject = Object.fromEntries(
+            Object.entries(pagesObject).map(entry => {
+                const key = entry[0];
+                let value: any = entry[1];
+
+                if (!isPlainObject(value)) {
+                    return [key, value];
+                }
+
+                value["type"] = "directory";
+
+                return [key, value];
+            }),
+        );
 
         $scope.set("$pages", mapFromObject(pagesObject));
 
