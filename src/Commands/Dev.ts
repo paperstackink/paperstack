@@ -60,6 +60,7 @@ export default class Dev extends Command {
         const watcher = chokidar.watch(paths, {
             persistent: true,
             disableGlobbing: true,
+            ignoreInitial: true,
         });
 
         let ready = false;
