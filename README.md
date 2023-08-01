@@ -1,6 +1,6 @@
 # Paperstack
 
-Paperstack is a simple, robust static site generator. It uses a new templating language called Stencil. Stencil is based on components rather than partials, blocks or includes that other templating langauges uses.
+Paperstack is a static site generator. It uses a new templating language called Stencil. Stencil is based on components rather than partials, blocks or includes that other templating langauges uses.
 
 In it's current state Paperstack can turn `.stencil` files into `.html` files and copy static assets into the `Output` directory.
 
