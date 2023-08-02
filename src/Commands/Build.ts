@@ -107,7 +107,7 @@ export default class Build extends Command {
 
                 file.set("path", path);
                 file.set("slug", slug);
-                file.set("type", "page");
+                file.set("isPage", true);
 
                 const nestedPath = item.sourceFile
                     .replace("/", "")
@@ -128,7 +128,7 @@ export default class Build extends Command {
                     return [key, value];
                 }
 
-                value["type"] = "directory";
+                value["isDirectory"] = true;
 
                 return [key, value];
             }),
