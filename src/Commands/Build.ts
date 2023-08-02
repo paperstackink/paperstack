@@ -102,11 +102,13 @@ export default class Build extends Command {
                         .split("/")
                         .filter(piece => piece)
                         .pop() || "";
+                const name = item.sourceFile.split("/").pop();
 
                 const file = new Map();
 
                 file.set("path", path);
                 file.set("slug", slug);
+                file.set("name", name);
                 file.set("isPage", true);
 
                 const nestedPath = item.sourceFile
