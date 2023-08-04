@@ -2,15 +2,50 @@ import * as Path from "@/Utilities/Path";
 import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
-import { set } from "lodash";
-import { isPlainObject } from "lodash";
 
 import { compile } from "@paperstack/stencil";
-import { mapFromObject } from "@/Utilities/Helpers";
+
+declare global {
+    interface Map<K, V> {
+        map<T>(predicate: (key: K, value: V) => T): Map<V, T>;
+    }
+}
+
+Map.prototype.map = function <K, V, T>(
+    predicate: (value: V, key: K) => T,
+): Map<K, T> {
+    let map: Map<K, T> = new Map();
+
+    this.forEach((value: V, key: K) => {
+        map.set(key, predicate(value, key));
+    });
+    return map;
+};
 
 type Options = {
     output?: boolean;
 };
+
+type Page = {
+    path: string;
+    slug: string;
+    name: string;
+    isPage: true;
+    isDirectory: false;
+    nestedPath?: string;
+};
+
+type PageMap = Map<keyof Page, Page[keyof Page]>;
+
+type Directory = {
+    isPage: false;
+    isDirectory: true;
+    [key: string]: MapItem;
+};
+
+type DirectoryMap = Map<keyof Directory, Directory[keyof Directory]>;
+
+type MapItem = PageMap | DirectoryMap | boolean;
 
 export default class Build extends Command {
     static command = "build";
@@ -90,53 +125,161 @@ export default class Build extends Command {
 
         let $scope = new Map();
 
-        let pagesObject = pagesMappedToOutput.reduce(
-            (object, item) => {
-                const path = Path.subtract(
-                    item.path,
-                    outputDirectory,
-                    "index.html",
-                );
-                const slug =
-                    path
-                        .split("/")
-                        .filter(piece => piece)
-                        .pop() || "";
-                const name = item.sourceFile.split("/").pop();
+        let pagesObjectArray: PageMap[] = pagesMappedToOutput.map(item => {
+            const path = Path.subtract(
+                item.path,
+                outputDirectory,
+                "index.html",
+            );
+            const slug =
+                path
+                    .split("/")
+                    .filter(piece => piece)
+                    .pop() || "";
+            const name = item.sourceFile.split("/").pop();
+            const nestedPath = item.sourceFile
+                .replace("/", "")
+                .replaceAll("/", ".");
 
-                const file = new Map();
+            const page = new Map();
 
-                file.set("path", path);
-                file.set("slug", slug);
-                file.set("name", name);
-                file.set("isPage", true);
+            page.set("path", path);
+            page.set("slug", slug);
+            page.set("name", name);
+            page.set("isPage", true);
+            page.set("isDirectory", false);
+            page.set("nestedPath", nestedPath);
 
-                const nestedPath = item.sourceFile
-                    .replace("/", "")
-                    .replaceAll("/", ".");
+            return page;
+        });
 
-                return set(object, nestedPath, file);
-            },
-            {} as {},
-        );
+        let $pages = new Map();
 
-        // Add 'type: directory' to all objects and nested objects
-        pagesObject = Object.fromEntries(
-            Object.entries(pagesObject).map(entry => {
+        $pages.set("isPage", false);
+        $pages.set("isDirectory", true);
+
+        function set(
+            map: DirectoryMap,
+            key: string,
+            page: PageMap,
+        ): DirectoryMap {
+            if (!key.includes(".")) {
+                map.set(key, page);
+
+                return map;
+            }
+
+            const newMapKey = key.split(".").shift()!;
+
+            if (!map.has(newMapKey)) {
+                const newMap = new Map();
+                const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                newMap.set("isPage", false);
+                newMap.set("isDirectory", true);
+
+                map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                return map;
+            } else {
+                const newMap = map.get(newMapKey)! as DirectoryMap;
+                const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                return map;
+            }
+        }
+
+        pagesObjectArray.forEach(page => {
+            const nestedPath = page.get("nestedPath");
+            page.delete("nestedPath");
+
+            if (typeof nestedPath === "string") {
+                $pages = set($pages, nestedPath, page);
+            }
+        });
+
+        function getSubRecords(directory: DirectoryMap) {
+            let pages = new Map();
+            let allPages = new Map();
+            let directories = new Map();
+            let allDirectories = new Map();
+
+            for (const entry of directory.entries()) {
                 const key = entry[0];
-                let value: any = entry[1];
+                const value = entry[1];
 
-                if (!isPlainObject(value)) {
-                    return [key, value];
+                if (!(value instanceof Map)) {
+                    continue;
                 }
 
-                value["isDirectory"] = true;
+                if (value.get("isPage")) {
+                    pages.set(key, value);
+                    allPages.set(key, value);
+                }
 
-                return [key, value];
-            }),
-        );
+                if (value.get("isDirectory")) {
+                    directories.set(key, value);
+                    allDirectories.set(key, value);
 
-        $scope.set("$pages", mapFromObject(pagesObject));
+                    const {
+                        allPages: nestedAllPages,
+                        allDirectories: nestedAllDirectories,
+                    } = getSubRecords(value as DirectoryMap);
+
+                    for (const nestedPageEntry of nestedAllPages) {
+                        allPages.set(
+                            `${key}.${nestedPageEntry[0]}`,
+                            nestedPageEntry[1],
+                        );
+                    }
+
+                    for (const nestedDirectoryEntry of nestedAllDirectories) {
+                        allDirectories.set(
+                            `${key}.${nestedDirectoryEntry[0]}`,
+                            nestedDirectoryEntry[1],
+                        );
+                    }
+                }
+            }
+
+            return { pages, allPages, directories, allDirectories };
+        }
+
+        $pages = $pages.map((map, key) => {
+            if (!(map instanceof Map)) {
+                return map;
+            }
+
+            if (!map.get("isDirectory")) {
+                return map;
+            }
+
+            const { pages, allPages, directories, allDirectories } =
+                getSubRecords(map);
+
+            map.set("pages", pages);
+            map.set("allPages", allPages);
+            map.set("directories", directories);
+            map.set("allDirectories", allDirectories);
+
+            return map;
+        });
+
+        const {
+            pages: pagesAlt,
+            allPages,
+            directories,
+            allDirectories,
+        } = getSubRecords($pages);
+
+        $pages.set("pages", pagesAlt);
+        $pages.set("allPages", allPages);
+        $pages.set("directories", directories);
+        $pages.set("allDirectories", allDirectories);
+
+        $scope.set("$pages", $pages);
 
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
@@ -186,4 +329,17 @@ export default class Build extends Command {
 
         Terminal.write("Options: This command has no options");
     }
+}
+
+function addPropertiesToDirectories(
+    map: Map<string, MapItem>,
+): Map<string, MapItem> {
+    if (map.get("isPage")) {
+        return map;
+    }
+
+    map.set("isPage", false);
+    map.set("isDirectory", true);
+
+    return map;
 }
