@@ -4,6 +4,7 @@ import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
 import { compile } from "@paperstack/stencil";
+import { first } from "lodash";
 
 declare global {
     interface Map<K, V> {
@@ -281,13 +282,39 @@ export default class Build extends Command {
 
         $scope.set("$pages", $pages);
 
+        function get(map: DirectoryMap, key: string) {
+            if (!key.includes(".")) {
+                return map.get(key);
+            }
+
+            const [firstKey, ...remainingKeys] = key.split(".");
+
+            if (!map.has(firstKey)) {
+                return null;
+            }
+
+            const newMap = map.get(firstKey)! as DirectoryMap;
+            const newKey = remainingKeys.join(".");
+
+            return get(newMap, newKey);
+        }
+
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
+
+            const nestedPath = page.sourceFile
+                .replace("/", "")
+                .replaceAll("/", ".");
+
+            const $page = get($pages, nestedPath);
+
+            $scope.set("$page", $page);
 
             const compiledContents = await compile(page.contents, {
                 components,
                 environment: {
-                    $pages: $scope.get("$pages"),
+                    $page: $page,
+                    $pages: $pages,
                 },
             });
 
