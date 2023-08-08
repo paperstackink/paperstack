@@ -3,7 +3,7 @@ import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
-import { compile } from "@paperstack/stencil";
+import { compile, extractData } from "@paperstack/stencil";
 import { first } from "lodash";
 
 declare global {
@@ -306,7 +306,10 @@ export default class Build extends Command {
                 .replace("/", "")
                 .replaceAll("/", ".");
 
-            const $page = get($pages, nestedPath);
+            const extractedData = await extractData(page.contents);
+            const fetchedPage = get($pages, nestedPath)! as DirectoryMap;
+
+            const $page = new Map([...fetchedPage, ...extractedData]);
 
             $scope.set("$page", $page);
 
