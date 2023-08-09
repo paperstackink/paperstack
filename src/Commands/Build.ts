@@ -34,6 +34,7 @@ type Page = {
     isPage: true;
     isDirectory: false;
     nestedPath?: string;
+    [key: string]: any;
 };
 
 type PageMap = Map<keyof Page, Page[keyof Page]>;
@@ -126,33 +127,39 @@ export default class Build extends Command {
 
         let $scope = new Map();
 
-        let pagesObjectArray: PageMap[] = pagesMappedToOutput.map(item => {
-            const path = Path.subtract(
-                item.path,
-                outputDirectory,
-                "index.html",
-            );
-            const slug =
-                path
-                    .split("/")
-                    .filter(piece => piece)
-                    .pop() || "";
-            const name = item.sourceFile.split("/").pop();
-            const nestedPath = item.sourceFile
-                .replace("/", "")
-                .replaceAll("/", ".");
+        let pagesObjectArrayPromises: Promise<PageMap>[] =
+            pagesMappedToOutput.map(async item => {
+                const path = Path.subtract(
+                    item.path,
+                    outputDirectory,
+                    "index.html",
+                );
+                const slug =
+                    path
+                        .split("/")
+                        .filter(piece => piece)
+                        .pop() || "";
+                const name = item.sourceFile.split("/").pop();
+                const nestedPath = item.sourceFile
+                    .replace("/", "")
+                    .replaceAll("/", ".");
 
-            const page = new Map();
+                const data: PageMap = await extractData(item.contents);
+                const page = new Map([...data]);
 
-            page.set("path", path);
-            page.set("slug", slug);
-            page.set("name", name);
-            page.set("isPage", true);
-            page.set("isDirectory", false);
-            page.set("nestedPath", nestedPath);
+                page.set("path", path);
+                page.set("slug", slug);
+                page.set("name", name);
+                page.set("isPage", true);
+                page.set("isDirectory", false);
+                page.set("nestedPath", nestedPath);
 
-            return page;
-        });
+                return page;
+            });
+
+        let pagesObjectArray: PageMap[] = await Promise.all(
+            pagesObjectArrayPromises,
+        );
 
         let $pages = new Map();
 
@@ -306,10 +313,7 @@ export default class Build extends Command {
                 .replace("/", "")
                 .replaceAll("/", ".");
 
-            const extractedData = await extractData(page.contents);
-            const fetchedPage = get($pages, nestedPath)! as DirectoryMap;
-
-            const $page = new Map([...fetchedPage, ...extractedData]);
+            const $page = get($pages, nestedPath)! as DirectoryMap;
 
             $scope.set("$page", $page);
 
