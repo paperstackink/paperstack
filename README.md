@@ -6,7 +6,7 @@ In it's current state Paperstack can turn `.stencil` files into `.html` files an
 
 The plan is to make Paperstack a 'batteries-included' static site generator. In the [Roadmap](#roadmap) section you can read about the immediate plans.
 
-*Note: I'm still experimenting with Paperstack and it's currently far from being stable.*
+_Note: I'm still experimenting with Paperstack and it's currently far from being stable._
 
 ## Getting started
 
@@ -44,7 +44,7 @@ Components can be used to create re-usable layouts, UI elements or partials.
 
 Components are defined in the `Components` directory. You can also nest components in folders inside the `Components` directory.
 
-Note: Component names are unique across the project. That means you can't have a `Components/Dark/Button.stencil` and a `Components/Light/Button.stencil`
+Note: Component names are unique across the project. That means you can't have a `Components/Dark/Button.stencil` and a `Components/Light/Button.stencil`. Additionally components can't use the same name as any built-in components.
 
 ### Using components
 
@@ -171,6 +171,8 @@ You can manually merge attributes passed in with attributes on the root element:
 
 ### Directives
 
+#### @if
+
 You can conditionally add content with the `@if` directive:
 
 ```
@@ -182,6 +184,124 @@ You can conditionally add content with the `@if` directive:
     <slot />
 </button>
 ```
+
+#### @each
+
+You can loop over records with @each
+
+```
+@each(page, name in $pages)
+    <a href="{{ page.path }}">{{ page.title }}</a>
+@endeach
+```
+
+### Records
+
+Records are key/value data types. It's not possible to define custom records but Paperstack provides a set of records.
+
+You can access fields on records with dot notation:
+
+```
+{{ $pages.Index.path }}
+```
+
+#### Methods
+
+Records have a set of methods to make them easier to work with.
+
+##### sortBy
+
+`sortBy` can be used to sort all items in a record based on a field. You can also determine whether it sorts in ascending or descending order.
+
+```
+$pages.Articles.pages.sortBy('date', 'desc')
+```
+
+Note: This example assumes you've added a `date` field to all articles using a `Data` component.
+
+#### $pages
+
+`$pages` is a global record that contains all pages and directories in your project. It follows the same structure that is present in the `Pages` directory.
+
+The following page structure:
+
+```
+- Pages
+    - Index.stencil
+    - About.stencil
+    - Articles
+        - Index.stencil
+        - HowToBuildAWebsite.stencil
+```
+
+Leads to the following `$pages` record:
+
+```
+- $pages
+    - Index: <page>
+    - About: <page>
+    - Articles
+        - Index: <page>
+        - HowToBuildAWebsite: <page>
+```
+
+Each page has the same fields as the `$page` record. Each directory has some extra fields that can be used in `@if` and `@each` directives.
+
+The `$pages` directory from the previous example actually looks like this:
+
+```
+- $pages
+    - isPage: false
+    - isDirectory: true
+    - pages: <record of all pages in this directory>
+    - allPages: <record of all pages (including deeply nested) in this directory>
+    - directories: <record of all directories in this directory>
+    - allDirectories: <record of all directories (including deeply nested) in this directory>
+    - Index: <page>
+    - About: <page>
+    - Articles
+        - isPage: false
+        - isDirectory: true
+        - pages: <record of all pages in this directory>
+        - allPages: <record of all pages (including deeply nested) in this directory>
+        - directories: <record of all directories in this directory>
+        - allDirectories: <record of all directories (including deeply nested) in this directory>
+        - Index: <page>
+        - HowToBuildAWebsite: <page>
+```
+
+#### $page
+
+`$page` is a record that contains all information about the current page. It has the following structure:
+
+```
+- $page
+    - isPage: true
+    - isDirectory: false
+    - name: <name of the file>
+    - slug: <a sluggified version of the name>
+    - path: <the absolute path to the page: /articles/how-to-build-a-website>
+```
+
+Additional fields can be added to the `$page` record with a `Data` component.
+
+### Built-in components
+
+Paperstack provides some built-in components. Similar to custom components they are available without having to import them.
+
+#### <Data />
+
+The `Data` component can be used to add additional fields to a page via yaml. These fields can be accessed via the `$page` or `$pages` records.
+
+```
+<Data>
+    title: How to make a website
+    date: 2023-05-24
+    featured: true
+</Data>
+```
+
+Note: The `Data` component can only be used inside `.stencil` files in the `Pages` directory. You can't add a `Data` component inside a custom component.
 
 ### Expressions
 
@@ -264,10 +384,10 @@ You can check out the repo here: [https://github.com/BjornDCode/bjornlindholm.co
 
 These are some of the most urgent issues and improvements:
 
-- [ ] Editor plugins
-- [ ] [Elm-like errors](https://github.com/paperstackink/paperstack/issues/1)
-- [ ] [`@if` directive](https://github.com/paperstackink/stencil/issues/2)
-- [ ] [`@each` directive](https://github.com/paperstackink/stencil/issues/5)
-- [ ] [Global `pages` variable](https://github.com/paperstackink/stencil/issues/6)
-- [ ] [Markdown pages](https://github.com/paperstackink/paperstack/issues/2)
-- [ ] [CSS processing](https://github.com/paperstackink/paperstack/issues/7)
+-   [x] [`@if` directive](https://github.com/paperstackink/stencil/issues/2)
+-   [x] [`@each` directive](https://github.com/paperstackink/stencil/issues/5)
+-   [x] [Global `pages` variable](https://github.com/paperstackink/stencil/issues/6)
+-   [ ] Editor plugins
+-   [ ] [Elm-like errors](https://github.com/paperstackink/paperstack/issues/1)
+-   [ ] [Markdown pages](https://github.com/paperstackink/paperstack/issues/2)
+-   [ ] [CSS processing](https://github.com/paperstackink/paperstack/issues/7)

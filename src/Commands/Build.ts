@@ -3,11 +3,51 @@ import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
-import { compile } from "@paperstack/stencil";
+import { compile, extractData } from "@paperstack/stencil";
+import { first } from "lodash";
+
+declare global {
+    interface Map<K, V> {
+        map<T>(predicate: (key: K, value: V) => T): Map<V, T>;
+    }
+}
+
+Map.prototype.map = function <K, V, T>(
+    predicate: (value: V, key: K) => T,
+): Map<K, T> {
+    let map: Map<K, T> = new Map();
+
+    this.forEach((value: V, key: K) => {
+        map.set(key, predicate(value, key));
+    });
+    return map;
+};
 
 type Options = {
     output?: boolean;
 };
+
+type Page = {
+    path: string;
+    slug: string;
+    name: string;
+    isPage: true;
+    isDirectory: false;
+    nestedPath?: string;
+    [key: string]: any;
+};
+
+type PageMap = Map<keyof Page, Page[keyof Page]>;
+
+type Directory = {
+    isPage: false;
+    isDirectory: true;
+    [key: string]: MapItem;
+};
+
+type DirectoryMap = Map<keyof Directory, Directory[keyof Directory]>;
+
+type MapItem = PageMap | DirectoryMap | boolean;
 
 export default class Build extends Command {
     static command = "build";
@@ -56,9 +96,15 @@ export default class Build extends Command {
                 directory,
                 Path.buildFileName(name, "html"),
             );
+            const sourceFile = Path.subtract(
+                file.path,
+                pagesDirectory,
+                ".stencil",
+            );
 
             return {
                 ...file,
+                sourceFile,
                 directory,
                 path,
                 name,
@@ -79,11 +125,204 @@ export default class Build extends Command {
             Terminal.line();
         }
 
+        let $scope = new Map();
+
+        let pagesObjectArrayPromises: Promise<PageMap>[] =
+            pagesMappedToOutput.map(async item => {
+                const path = Path.subtract(
+                    item.path,
+                    outputDirectory,
+                    "index.html",
+                );
+                const slug =
+                    path
+                        .split("/")
+                        .filter(piece => piece)
+                        .pop() || "";
+                const name = item.sourceFile.split("/").pop();
+                const nestedPath = item.sourceFile
+                    .replace("/", "")
+                    .replaceAll("/", ".");
+
+                const data: PageMap = await extractData(item.contents);
+                const page = new Map([...data]);
+
+                page.set("path", path);
+                page.set("slug", slug);
+                page.set("name", name);
+                page.set("isPage", true);
+                page.set("isDirectory", false);
+                page.set("nestedPath", nestedPath);
+
+                return page;
+            });
+
+        let pagesObjectArray: PageMap[] = await Promise.all(
+            pagesObjectArrayPromises,
+        );
+
+        let $pages = new Map();
+
+        $pages.set("isPage", false);
+        $pages.set("isDirectory", true);
+
+        function set(
+            map: DirectoryMap,
+            key: string,
+            page: PageMap,
+        ): DirectoryMap {
+            if (!key.includes(".")) {
+                map.set(key, page);
+
+                return map;
+            }
+
+            const newMapKey = key.split(".").shift()!;
+
+            if (!map.has(newMapKey)) {
+                const newMap = new Map();
+                const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                newMap.set("isPage", false);
+                newMap.set("isDirectory", true);
+
+                map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                return map;
+            } else {
+                const newMap = map.get(newMapKey)! as DirectoryMap;
+                const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                return map;
+            }
+        }
+
+        pagesObjectArray.forEach(page => {
+            const nestedPath = page.get("nestedPath");
+            page.delete("nestedPath");
+
+            if (typeof nestedPath === "string") {
+                $pages = set($pages, nestedPath, page);
+            }
+        });
+
+        function getSubRecords(directory: DirectoryMap) {
+            let pages = new Map();
+            let allPages = new Map();
+            let directories = new Map();
+            let allDirectories = new Map();
+
+            for (const entry of directory.entries()) {
+                const key = entry[0];
+                const value = entry[1];
+
+                if (!(value instanceof Map)) {
+                    continue;
+                }
+
+                if (value.get("isPage")) {
+                    pages.set(key, value);
+                    allPages.set(key, value);
+                }
+
+                if (value.get("isDirectory")) {
+                    directories.set(key, value);
+                    allDirectories.set(key, value);
+
+                    const {
+                        allPages: nestedAllPages,
+                        allDirectories: nestedAllDirectories,
+                    } = getSubRecords(value as DirectoryMap);
+
+                    for (const nestedPageEntry of nestedAllPages) {
+                        allPages.set(
+                            `${key}.${nestedPageEntry[0]}`,
+                            nestedPageEntry[1],
+                        );
+                    }
+
+                    for (const nestedDirectoryEntry of nestedAllDirectories) {
+                        allDirectories.set(
+                            `${key}.${nestedDirectoryEntry[0]}`,
+                            nestedDirectoryEntry[1],
+                        );
+                    }
+                }
+            }
+
+            return { pages, allPages, directories, allDirectories };
+        }
+
+        $pages = $pages.map((map, key) => {
+            if (!(map instanceof Map)) {
+                return map;
+            }
+
+            if (!map.get("isDirectory")) {
+                return map;
+            }
+
+            const { pages, allPages, directories, allDirectories } =
+                getSubRecords(map);
+
+            map.set("pages", pages);
+            map.set("allPages", allPages);
+            map.set("directories", directories);
+            map.set("allDirectories", allDirectories);
+
+            return map;
+        });
+
+        const {
+            pages: pagesAlt,
+            allPages,
+            directories,
+            allDirectories,
+        } = getSubRecords($pages);
+
+        $pages.set("pages", pagesAlt);
+        $pages.set("allPages", allPages);
+        $pages.set("directories", directories);
+        $pages.set("allDirectories", allDirectories);
+
+        $scope.set("$pages", $pages);
+
+        function get(map: DirectoryMap, key: string) {
+            if (!key.includes(".")) {
+                return map.get(key);
+            }
+
+            const [firstKey, ...remainingKeys] = key.split(".");
+
+            if (!map.has(firstKey)) {
+                return null;
+            }
+
+            const newMap = map.get(firstKey)! as DirectoryMap;
+            const newKey = remainingKeys.join(".");
+
+            return get(newMap, newKey);
+        }
+
         const promises = pagesMappedToOutput.map(async page => {
             await Filesystem.createDirectory(page.directory);
 
+            const nestedPath = page.sourceFile
+                .replace("/", "")
+                .replaceAll("/", ".");
+
+            const $page = get($pages, nestedPath)! as DirectoryMap;
+
+            $scope.set("$page", $page);
+
             const compiledContents = await compile(page.contents, {
                 components,
+                environment: {
+                    $page: $page,
+                    $pages: $pages,
+                },
             });
 
             await Filesystem.writeFile(page.path, compiledContents);
@@ -124,4 +363,17 @@ export default class Build extends Command {
 
         Terminal.write("Options: This command has no options");
     }
+}
+
+function addPropertiesToDirectories(
+    map: Map<string, MapItem>,
+): Map<string, MapItem> {
+    if (map.get("isPage")) {
+        return map;
+    }
+
+    map.set("isPage", false);
+    map.set("isDirectory", true);
+
+    return map;
 }
