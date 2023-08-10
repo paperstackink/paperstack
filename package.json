@@ -1,41 +1,41 @@
 {
-  "name": "@paperstack/paperstack",
-  "version": "0.3.0",
-  "description": "A simple, robust static site generator.",
-  "scripts": {
-    "prettify": "node_modules/.bin/prettier . --write",
-    "build": "rm -rf dist && tsc -noEmit && npx ts-node scripts/build.ts"
-  },
-  "bin": {
-    "paper": "./bin/run"
-  },
-  "files": [
-    "dist",
-    "bin"
-  ],
-  "author": {
-    "name": "Bjørn Lindholm",
-    "email": "me@bjornlindholm.com",
-    "url": "https://bjornlindholm.com"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/paperstackink/paperstack"
-  },
-  "homepage": "https://github.com/paperstackink/paperstack",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/lodash": "^4.14.195",
-    "@types/node": "^20.3.1",
-    "@types/yargs": "^17.0.24",
-    "esbuild": "^0.18.5",
-    "prettier": "^2.8.8",
-    "typescript": "^5.1.3"
-  },
-  "dependencies": {
-    "@paperstack/stencil": "^0.2.0",
-    "chokidar": "^3.5.3",
-    "http-server": "^14.1.1",
-    "lodash": "^4.17.21"
-  }
+    "name": "@paperstack/paperstack",
+    "version": "0.3.0",
+    "description": "A simple, robust static site generator.",
+    "scripts": {
+        "prettify": "node_modules/.bin/prettier . --write",
+        "build": "rm -rf dist && tsc -noEmit && npx ts-node scripts/build.ts"
+    },
+    "bin": {
+        "paper": "./bin/run"
+    },
+    "files": [
+        "dist",
+        "bin"
+    ],
+    "author": {
+        "name": "Bjørn Lindholm",
+        "email": "me@bjornlindholm.com",
+        "url": "https://bjornlindholm.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/paperstackink/paperstack"
+    },
+    "homepage": "https://github.com/paperstackink/paperstack",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/lodash": "^4.14.195",
+        "@types/node": "^20.3.1",
+        "@types/yargs": "^17.0.24",
+        "esbuild": "^0.18.5",
+        "prettier": "^2.8.8",
+        "typescript": "^5.1.3"
+    },
+    "dependencies": {
+        "@paperstack/stencil": "^0.3.0",
+        "chokidar": "^3.5.3",
+        "http-server": "^14.1.1",
+        "lodash": "^4.17.21"
+    }
 }
