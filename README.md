@@ -15,7 +15,7 @@ Make sure you have `node@20.1` or higher installed.
 Run the following command:
 
 ```
-git clone https://github.com/paperstackink/starter.git ~/Code/my-site
+git clone https://github.com/paperstackink/starter.git my-site
 ```
 
 This will create a new project in the `my-site` directory.
