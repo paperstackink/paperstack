@@ -23,7 +23,9 @@ This will create a new project in the `my-site` directory.
 Then run the following command to start a local server:
 
 ```
-cd my-site && npm run dev
+cd my-site
+npm install
+npm run dev
 ```
 
 ## Pages
