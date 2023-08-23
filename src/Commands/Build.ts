@@ -157,6 +157,7 @@ export default class Build extends Command {
                 page.set("isPage", true);
                 page.set("isDirectory", false);
                 page.set("nestedPath", nestedPath);
+                page.set("$data", data);
 
                 return page;
             });
