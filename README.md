@@ -6,7 +6,7 @@ In it's current state Paperstack can turn `.stencil` files into `.html` files an
 
 The plan is to make Paperstack a 'batteries-included' static site generator. In the [Roadmap](#roadmap) section you can read about the immediate plans.
 
-_Note: I'm still experimenting with Paperstack and it's currently far from being stable._
+_Note: I'm still experimenting with Paperstack and it's currently far from being stable. Any feedback is welcome!_
 
 ## Getting started
 
