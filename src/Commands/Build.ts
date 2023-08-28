@@ -333,7 +333,7 @@ export default class Build extends Command {
 
             const compiledContents = await compile(page.contents, {
                 components,
-                environment,
+                environment: { global: environment },
             });
 
             await Filesystem.writeFile(page.path, compiledContents);
