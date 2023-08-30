@@ -3,7 +3,7 @@ import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
-import { compile, extractData } from "@paperstack/stencil";
+import { compile, extractData, CompilationError } from "@paperstack/stencil";
 import { first } from "lodash";
 
 declare global {
@@ -331,15 +331,29 @@ export default class Build extends Command {
                 environment[key] = value;
             });
 
-            const compiledContents = await compile(page.contents, {
-                components,
-                environment: { global: environment },
-            });
+            try {
+                const compiledContents = await compile(
+                    page.contents,
+                    {
+                        components,
+                        environment: { global: environment },
+                    },
+                    {
+                        path: `Pages/${nestedPath}.stencil`,
+                    },
+                );
 
-            await Filesystem.writeFile(page.path, compiledContents);
+                await Filesystem.writeFile(page.path, compiledContents);
 
-            if (output) {
-                Terminal.write("✓", page.path);
+                if (output) {
+                    Terminal.write("✓", page.path);
+                }
+            } catch (error) {
+                if (error instanceof CompilationError) {
+                    return Promise.reject(error.output); // Stop processing and output the error message
+                } else {
+                    throw error;
+                }
             }
         });
 
