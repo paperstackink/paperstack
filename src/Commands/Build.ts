@@ -49,6 +49,10 @@ type DirectoryMap = Map<keyof Directory, Directory[keyof Directory]>;
 
 type MapItem = PageMap | DirectoryMap | boolean;
 
+type Environment = {
+    [key: string]: any;
+};
+
 export default class Build extends Command {
     static command = "build";
     static description = "Build project";
@@ -153,6 +157,7 @@ export default class Build extends Command {
                 page.set("isPage", true);
                 page.set("isDirectory", false);
                 page.set("nestedPath", nestedPath);
+                page.set("$data", data);
 
                 return page;
             });
@@ -317,12 +322,18 @@ export default class Build extends Command {
 
             $scope.set("$page", $page);
 
+            const environment: Environment = {
+                $page: $page,
+                $pages: $pages,
+            };
+
+            $page.forEach((value, key) => {
+                environment[key] = value;
+            });
+
             const compiledContents = await compile(page.contents, {
                 components,
-                environment: {
-                    $page: $page,
-                    $pages: $pages,
-                },
+                environment: { global: environment },
             });
 
             await Filesystem.writeFile(page.path, compiledContents);
