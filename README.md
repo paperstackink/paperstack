@@ -171,6 +171,52 @@ You can manually merge attributes passed in with attributes on the root element:
 </button>
 ```
 
+#### Binding attributes
+
+You can assign all properties of a record as attributs on a node.
+
+```
+<Button #bind="$record">
+    Click here
+<Button>
+```
+
+This is especially useful when dynamically rendering components.
+
+### Dynamic components
+
+It's possible to dynamically render a component by using `Component` and giving it a component name.
+
+```
+<Component is="Card" />
+```
+
+It's also possible to dynamically determine the component name:
+
+```
+<Component is="{{ name }}" />
+```
+
+### Recursive components
+
+You can use a component recursively.
+
+```
+// Components/List.stencil
+<List>
+    <ListItem>Item 1<ListItem>
+    <ListItem>
+        Item 2
+        <List>
+            <ListItem>Item 2.a<ListItem>
+            <ListItem>Item 2.b<ListItem>
+        </List>
+    <ListItem>
+</List>
+```
+
+Note: If you are rending the component dynamically it's important that you have a check in the component that will stop the recursion at some point. Otherwise you will run into an infinite loop.
+
 ### Directives
 
 #### @if
@@ -221,56 +267,46 @@ $pages.Articles.pages.sortBy('date', 'desc')
 
 Note: This example assumes you've added a `date` field to all articles using a `Data` component.
 
+##### filterBy
+
+`filterBy` can be used to remove properties from a record.
+
+The first argument is the field to check.
+
+The second argument is the operator. The valid operators are:
+
+-   `equals`
+-   `not equals`
+-   `greater than`
+-   `greater than or equals`
+-   `less than`
+-   `less than or equals`
+-   `contains`
+-   `truthy`
+-   `not truthy`
+-   `exists`
+-   `not exists`
+
+The third argument is a value to compare by if required by the operator.
+
+```
+$pages.Articles.pages.filterBy('title', 'exists')
+```
+
 #### $pages
 
 `$pages` is a global record that contains all pages and directories in your project. It follows the same structure that is present in the `Pages` directory.
 
-The following page structure:
+Each page has the same fields as the `$page` record.
 
-```
-- Pages
-    - Index.stencil
-    - About.stencil
-    - Articles
-        - Index.stencil
-        - HowToBuildAWebsite.stencil
-```
+Each directory has the following properties:
 
-Leads to the following `$pages` record:
+-   `pages`: A record of all pages directly nested in the directory
+-   `directories`: A record of directories pages directly nested in the directory
+-   `allPages`: A record of all pages in the directory including nested directores
+-   `allDirectories`: A record of all directories in the directory including nested directores
 
-```
-- $pages
-    - Index: <page>
-    - About: <page>
-    - Articles
-        - Index: <page>
-        - HowToBuildAWebsite: <page>
-```
-
-Each page has the same fields as the `$page` record. Each directory has some extra fields that can be used in `@if` and `@each` directives.
-
-The `$pages` directory from the previous example actually looks like this:
-
-```
-- $pages
-    - isPage: false
-    - isDirectory: true
-    - pages: <record of all pages in this directory>
-    - allPages: <record of all pages (including deeply nested) in this directory>
-    - directories: <record of all directories in this directory>
-    - allDirectories: <record of all directories (including deeply nested) in this directory>
-    - Index: <page>
-    - About: <page>
-    - Articles
-        - isPage: false
-        - isDirectory: true
-        - pages: <record of all pages in this directory>
-        - allPages: <record of all pages (including deeply nested) in this directory>
-        - directories: <record of all directories in this directory>
-        - allDirectories: <record of all directories (including deeply nested) in this directory>
-        - Index: <page>
-        - HowToBuildAWebsite: <page>
-```
+It can be used to dynamically loop over pages to create menus, index pages etc.
 
 #### $page
 
@@ -286,6 +322,18 @@ The `$pages` directory from the previous example actually looks like this:
 ```
 
 Additional fields can be added to the `$page` record with a `Data` component.
+
+All the properties in `$page` are also available as global variables.
+
+#### $data
+
+A record of data added to a page with the `Data` component.
+
+#### $attributes
+
+A record of all attributes given to a component.
+
+Note: This record is only available inside components.
 
 ### Built-in components
 
@@ -359,6 +407,16 @@ You can use if/else:
 
 ```
 {{ if identifier equals 'blue' then 'bg-blue-500' else 'bg-gray-500' }}
+```
+
+## Debugging
+
+The `dump()` method can be used to dump any variable so it can be expected. You can parse multiple variables to the method.
+
+```
+<div>
+    {{ dump($pages) }}
+</div>
 ```
 
 ## Assets
