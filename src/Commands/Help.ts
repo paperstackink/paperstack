@@ -6,7 +6,6 @@ export default class Help extends Command {
     static description = "Information about the CLI tool";
 
     async handle(): Promise<void> {
-        Terminal.clear();
         Terminal.write("Paperstack");
         Terminal.line();
 

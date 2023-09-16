@@ -8,8 +8,6 @@ export default class MakeComponent extends Command {
     static description = "Create a new component";
 
     async handle({ options }: { options: string[] }): Promise<void> {
-        Terminal.clear();
-
         if (options.length < 1) {
             Terminal.error(
                 "Please provide a path where the new component should be created",
