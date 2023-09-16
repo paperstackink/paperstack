@@ -5,6 +5,7 @@ import { Command } from "@/Commands/Command";
 
 import { compile, extractData } from "@paperstack/stencil";
 import { first } from "lodash";
+import { DuplicatePagesError } from "@/Errors/DuplicatePagesError";
 
 declare global {
     interface Map<K, V> {
@@ -62,7 +63,6 @@ export default class Build extends Command {
         const assetsDirectory = Path.getAssetsDirectory();
         const componentsDirectory = Path.getComponentsDirectory();
         const outputDirectory = Path.getOutputDirectory();
-        const pages = await Filesystem.files(pagesDirectory);
 
         const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
         const componentsDirectoryExists = await Filesystem.exists(
@@ -79,6 +79,23 @@ export default class Build extends Command {
             throw new Error(
                 "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
             );
+        }
+
+        const pages = await Filesystem.files(pagesDirectory);
+        const pathsWithoutExtension = pages
+            .map(page => page.path)
+            .map(path => Path.removeExtension(path));
+
+        const duplicatePaths = pathsWithoutExtension.filter(
+            (path, index, array) => {
+                return array.indexOf(path) !== index;
+            },
+        );
+
+        if (duplicatePaths.length > 0) {
+            const path = duplicatePaths[0];
+
+            throw new DuplicatePagesError();
         }
 
         await Filesystem.removeDirectory(outputDirectory);
@@ -100,14 +117,19 @@ export default class Build extends Command {
                 directory,
                 Path.buildFileName(name, "html"),
             );
+            const fileExtension = Path.getExtension(file.path);
+            const sourceType =
+                fileExtension === "stencil" ? "stencil" : "markdown";
             const sourceFile = Path.subtract(
                 file.path,
                 pagesDirectory,
-                ".stencil",
+                ".",
+                fileExtension,
             );
 
             return {
                 ...file,
+                sourceType,
                 sourceFile,
                 directory,
                 path,
@@ -148,7 +170,9 @@ export default class Build extends Command {
                     .replace("/", "")
                     .replaceAll("/", ".");
 
-                const data: PageMap = await extractData(item.contents);
+                const data: PageMap = await extractData(item.contents, {
+                    type: item.sourceType,
+                });
                 const page = new Map([...data]);
 
                 page.set("path", path);
@@ -331,10 +355,14 @@ export default class Build extends Command {
                 environment[key] = value;
             });
 
-            const compiledContents = await compile(page.contents, {
-                components,
-                environment: { global: environment },
-            });
+            const compiledContents = await compile(
+                page.contents,
+                {
+                    components,
+                    environment: { global: environment },
+                },
+                { language: page.sourceType },
+            );
 
             await Filesystem.writeFile(page.path, compiledContents);
 

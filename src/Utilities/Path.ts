@@ -46,6 +46,12 @@ export function getExtension(path: string): string {
     return extension.replace(".", "");
 }
 
+export function removeExtension(path: string): string {
+    const extension = nodePath.extname(path);
+
+    return subtract(path, extension);
+}
+
 export function getFileName(path: string): string {
     const extension = getExtension(path);
 
