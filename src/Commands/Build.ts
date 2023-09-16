@@ -5,6 +5,7 @@ import { Command } from "@/Commands/Command";
 
 import { compile, extractData } from "@paperstack/stencil";
 import { first } from "lodash";
+import { DuplicatePagesError } from "@/Errors/DuplicatePagesError";
 
 declare global {
     interface Map<K, V> {
@@ -62,7 +63,6 @@ export default class Build extends Command {
         const assetsDirectory = Path.getAssetsDirectory();
         const componentsDirectory = Path.getComponentsDirectory();
         const outputDirectory = Path.getOutputDirectory();
-        const pages = await Filesystem.files(pagesDirectory);
 
         const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
         const componentsDirectoryExists = await Filesystem.exists(
@@ -79,6 +79,23 @@ export default class Build extends Command {
             throw new Error(
                 "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
             );
+        }
+
+        const pages = await Filesystem.files(pagesDirectory);
+        const pathsWithoutExtension = pages
+            .map(page => page.path)
+            .map(path => Path.removeExtension(path));
+
+        const duplicatePaths = pathsWithoutExtension.filter(
+            (path, index, array) => {
+                return array.indexOf(path) !== index;
+            },
+        );
+
+        if (duplicatePaths.length > 0) {
+            const path = duplicatePaths[0];
+
+            throw new DuplicatePagesError();
         }
 
         await Filesystem.removeDirectory(outputDirectory);
