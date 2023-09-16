@@ -26,9 +26,9 @@ export async function files(path: string): Promise<File[]> {
 
         const type = Path.getExtension(result.name);
 
-        if (type !== "stencil") {
+        if (!["stencil", "mds", "md", "markdown"].includes(type)) {
             throw new Error(
-                "The 'Pages' directory must only contain '.stencil' files.",
+                "The 'Pages' directory must only contain '.stencil' or '.mds' files.",
             );
         }
 

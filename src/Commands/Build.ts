@@ -100,14 +100,19 @@ export default class Build extends Command {
                 directory,
                 Path.buildFileName(name, "html"),
             );
+            const fileExtension = Path.getExtension(file.path);
+            const sourceType =
+                fileExtension === "stencil" ? "stencil" : "markdown";
             const sourceFile = Path.subtract(
                 file.path,
                 pagesDirectory,
-                ".stencil",
+                ".",
+                fileExtension,
             );
 
             return {
                 ...file,
+                sourceType,
                 sourceFile,
                 directory,
                 path,
@@ -148,7 +153,9 @@ export default class Build extends Command {
                     .replace("/", "")
                     .replaceAll("/", ".");
 
-                const data: PageMap = await extractData(item.contents);
+                const data: PageMap = await extractData(item.contents, {
+                    type: item.sourceType,
+                });
                 const page = new Map([...data]);
 
                 page.set("path", path);
@@ -331,10 +338,14 @@ export default class Build extends Command {
                 environment[key] = value;
             });
 
-            const compiledContents = await compile(page.contents, {
-                components,
-                environment: { global: environment },
-            });
+            const compiledContents = await compile(
+                page.contents,
+                {
+                    components,
+                    environment: { global: environment },
+                },
+                { language: page.sourceType },
+            );
 
             await Filesystem.writeFile(page.path, compiledContents);
 
