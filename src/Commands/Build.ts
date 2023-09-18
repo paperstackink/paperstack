@@ -131,6 +131,7 @@ export default class Build extends Command {
                 ...file,
                 sourceType,
                 sourceFile,
+                sourceFileExtension: fileExtension,
                 directory,
                 path,
                 name,
@@ -155,35 +156,44 @@ export default class Build extends Command {
 
         let pagesObjectArrayPromises: Promise<PageMap>[] =
             pagesMappedToOutput.map(async item => {
-                const path = Path.subtract(
-                    item.path,
-                    outputDirectory,
-                    "index.html",
-                );
-                const slug =
-                    path
-                        .split("/")
-                        .filter(piece => piece)
-                        .pop() || "";
-                const name = item.sourceFile.split("/").pop();
-                const nestedPath = item.sourceFile
-                    .replace("/", "")
-                    .replaceAll("/", ".");
+                try {
+                    const path = Path.subtract(
+                        item.path,
+                        outputDirectory,
+                        "index.html",
+                    );
+                    const slug =
+                        path
+                            .split("/")
+                            .filter(piece => piece)
+                            .pop() || "";
+                    const name = item.sourceFile.split("/").pop();
+                    const nestedPath = item.sourceFile
+                        .replace("/", "")
+                        .replaceAll("/", ".");
 
-                const data: PageMap = await extractData(item.contents, {
-                    type: item.sourceType,
-                });
-                const page = new Map([...data]);
+                    const data: PageMap = await extractData(item.contents, {
+                        language: item.sourceType,
+                        path: `Pages/${nestedPath}.${item.sourceFileExtension}`,
+                    });
+                    const page = new Map([...data]);
 
-                page.set("path", path);
-                page.set("slug", slug);
-                page.set("name", name);
-                page.set("isPage", true);
-                page.set("isDirectory", false);
-                page.set("nestedPath", nestedPath);
-                page.set("$data", data);
+                    page.set("path", path);
+                    page.set("slug", slug);
+                    page.set("name", name);
+                    page.set("isPage", true);
+                    page.set("isDirectory", false);
+                    page.set("nestedPath", nestedPath);
+                    page.set("$data", data);
 
-                return page;
+                    return page;
+                } catch (error) {
+                    if (error instanceof CompilationError) {
+                        return Promise.reject(error.output); // Stop processing and output the error message
+                    } else {
+                        throw error;
+                    }
+                }
             });
 
         let pagesObjectArray: PageMap[] = await Promise.all(
@@ -364,7 +374,7 @@ export default class Build extends Command {
                     },
                     {
                         language: page.sourceType,
-                        path: `Pages/${nestedPath}.stencil`,
+                        path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
                     },
                 );
 
