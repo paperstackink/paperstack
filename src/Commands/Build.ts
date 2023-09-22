@@ -404,6 +404,7 @@ export default class Build extends Command {
                 await Promise.all(promises);
             } catch (error) {
                 if (throws) {
+                    Terminal.clear();
                     throw error;
                 } else {
                     console.error(error);
@@ -411,6 +412,7 @@ export default class Build extends Command {
             }
         } catch (error) {
             if (throws) {
+                Terminal.clear();
                 throw error;
             } else {
                 console.error(error);
