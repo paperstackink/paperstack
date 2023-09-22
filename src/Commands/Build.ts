@@ -26,6 +26,7 @@ Map.prototype.map = function <K, V, T>(
 
 type Options = {
     output?: boolean;
+    throws?: boolean;
 };
 
 type Page = {
@@ -58,7 +59,11 @@ export default class Build extends Command {
     static command = "build";
     static description = "Build project";
 
-    async handle({ output = true }: Options): Promise<void> {
+    async handle({
+        output: providedOutput = true,
+        throws = false,
+    }: Options): Promise<void> {
+        let output = providedOutput;
         const pagesDirectory = Path.getPagesDirectory();
         const assetsDirectory = Path.getAssetsDirectory();
         const componentsDirectory = Path.getComponentsDirectory();
@@ -189,6 +194,7 @@ export default class Build extends Command {
                     return page;
                 } catch (error) {
                     if (error instanceof CompilationError) {
+                        output = false;
                         return Promise.reject(error.output); // Stop processing and output the error message
                     } else {
                         throw error;
@@ -196,203 +202,220 @@ export default class Build extends Command {
                 }
             });
 
-        let pagesObjectArray: PageMap[] = await Promise.all(
-            pagesObjectArrayPromises,
-        );
+        try {
+            let pagesObjectArray: PageMap[] = await Promise.all(
+                pagesObjectArrayPromises,
+            );
 
-        let $pages = new Map();
+            let $pages = new Map();
 
-        $pages.set("isPage", false);
-        $pages.set("isDirectory", true);
+            $pages.set("isPage", false);
+            $pages.set("isDirectory", true);
 
-        function set(
-            map: DirectoryMap,
-            key: string,
-            page: PageMap,
-        ): DirectoryMap {
-            if (!key.includes(".")) {
-                map.set(key, page);
+            function set(
+                map: DirectoryMap,
+                key: string,
+                page: PageMap,
+            ): DirectoryMap {
+                if (!key.includes(".")) {
+                    map.set(key, page);
 
-                return map;
-            }
-
-            const newMapKey = key.split(".").shift()!;
-
-            if (!map.has(newMapKey)) {
-                const newMap = new Map();
-                const newNestedKey = key.replace(`${newMapKey}.`, "");
-
-                newMap.set("isPage", false);
-                newMap.set("isDirectory", true);
-
-                map.set(newMapKey, set(newMap, newNestedKey, page));
-
-                return map;
-            } else {
-                const newMap = map.get(newMapKey)! as DirectoryMap;
-                const newNestedKey = key.replace(`${newMapKey}.`, "");
-
-                map.set(newMapKey, set(newMap, newNestedKey, page));
-
-                return map;
-            }
-        }
-
-        pagesObjectArray.forEach(page => {
-            const nestedPath = page.get("nestedPath");
-            page.delete("nestedPath");
-
-            if (typeof nestedPath === "string") {
-                $pages = set($pages, nestedPath, page);
-            }
-        });
-
-        function getSubRecords(directory: DirectoryMap) {
-            let pages = new Map();
-            let allPages = new Map();
-            let directories = new Map();
-            let allDirectories = new Map();
-
-            for (const entry of directory.entries()) {
-                const key = entry[0];
-                const value = entry[1];
-
-                if (!(value instanceof Map)) {
-                    continue;
+                    return map;
                 }
 
-                if (value.get("isPage")) {
-                    pages.set(key, value);
-                    allPages.set(key, value);
+                const newMapKey = key.split(".").shift()!;
+
+                if (!map.has(newMapKey)) {
+                    const newMap = new Map();
+                    const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                    newMap.set("isPage", false);
+                    newMap.set("isDirectory", true);
+
+                    map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                    return map;
+                } else {
+                    const newMap = map.get(newMapKey)! as DirectoryMap;
+                    const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                    map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                    return map;
                 }
+            }
 
-                if (value.get("isDirectory")) {
-                    directories.set(key, value);
-                    allDirectories.set(key, value);
+            pagesObjectArray.forEach(page => {
+                const nestedPath = page.get("nestedPath");
+                page.delete("nestedPath");
 
-                    const {
-                        allPages: nestedAllPages,
-                        allDirectories: nestedAllDirectories,
-                    } = getSubRecords(value as DirectoryMap);
+                if (typeof nestedPath === "string") {
+                    $pages = set($pages, nestedPath, page);
+                }
+            });
 
-                    for (const nestedPageEntry of nestedAllPages) {
-                        allPages.set(
-                            `${key}.${nestedPageEntry[0]}`,
-                            nestedPageEntry[1],
-                        );
+            function getSubRecords(directory: DirectoryMap) {
+                let pages = new Map();
+                let allPages = new Map();
+                let directories = new Map();
+                let allDirectories = new Map();
+
+                for (const entry of directory.entries()) {
+                    const key = entry[0];
+                    const value = entry[1];
+
+                    if (!(value instanceof Map)) {
+                        continue;
                     }
 
-                    for (const nestedDirectoryEntry of nestedAllDirectories) {
-                        allDirectories.set(
-                            `${key}.${nestedDirectoryEntry[0]}`,
-                            nestedDirectoryEntry[1],
-                        );
+                    if (value.get("isPage")) {
+                        pages.set(key, value);
+                        allPages.set(key, value);
+                    }
+
+                    if (value.get("isDirectory")) {
+                        directories.set(key, value);
+                        allDirectories.set(key, value);
+
+                        const {
+                            allPages: nestedAllPages,
+                            allDirectories: nestedAllDirectories,
+                        } = getSubRecords(value as DirectoryMap);
+
+                        for (const nestedPageEntry of nestedAllPages) {
+                            allPages.set(
+                                `${key}.${nestedPageEntry[0]}`,
+                                nestedPageEntry[1],
+                            );
+                        }
+
+                        for (const nestedDirectoryEntry of nestedAllDirectories) {
+                            allDirectories.set(
+                                `${key}.${nestedDirectoryEntry[0]}`,
+                                nestedDirectoryEntry[1],
+                            );
+                        }
                     }
                 }
+
+                return { pages, allPages, directories, allDirectories };
             }
 
-            return { pages, allPages, directories, allDirectories };
-        }
+            $pages = $pages.map((map, key) => {
+                if (!(map instanceof Map)) {
+                    return map;
+                }
 
-        $pages = $pages.map((map, key) => {
-            if (!(map instanceof Map)) {
+                if (!map.get("isDirectory")) {
+                    return map;
+                }
+
+                const { pages, allPages, directories, allDirectories } =
+                    getSubRecords(map);
+
+                map.set("pages", pages);
+                map.set("allPages", allPages);
+                map.set("directories", directories);
+                map.set("allDirectories", allDirectories);
+
                 return map;
+            });
+
+            const {
+                pages: pagesAlt,
+                allPages,
+                directories,
+                allDirectories,
+            } = getSubRecords($pages);
+
+            $pages.set("pages", pagesAlt);
+            $pages.set("allPages", allPages);
+            $pages.set("directories", directories);
+            $pages.set("allDirectories", allDirectories);
+
+            $scope.set("$pages", $pages);
+
+            function get(map: DirectoryMap, key: string) {
+                if (!key.includes(".")) {
+                    return map.get(key);
+                }
+
+                const [firstKey, ...remainingKeys] = key.split(".");
+
+                if (!map.has(firstKey)) {
+                    return null;
+                }
+
+                const newMap = map.get(firstKey)! as DirectoryMap;
+                const newKey = remainingKeys.join(".");
+
+                return get(newMap, newKey);
             }
 
-            if (!map.get("isDirectory")) {
-                return map;
-            }
+            const promises = pagesMappedToOutput.map(async page => {
+                await Filesystem.createDirectory(page.directory);
 
-            const { pages, allPages, directories, allDirectories } =
-                getSubRecords(map);
+                const nestedPath = page.sourceFile
+                    .replace("/", "")
+                    .replaceAll("/", ".");
 
-            map.set("pages", pages);
-            map.set("allPages", allPages);
-            map.set("directories", directories);
-            map.set("allDirectories", allDirectories);
+                const $page = get($pages, nestedPath)! as DirectoryMap;
 
-            return map;
-        });
+                $scope.set("$page", $page);
 
-        const {
-            pages: pagesAlt,
-            allPages,
-            directories,
-            allDirectories,
-        } = getSubRecords($pages);
+                const environment: Environment = {
+                    $page: $page,
+                    $pages: $pages,
+                };
 
-        $pages.set("pages", pagesAlt);
-        $pages.set("allPages", allPages);
-        $pages.set("directories", directories);
-        $pages.set("allDirectories", allDirectories);
+                $page.forEach((value, key) => {
+                    environment[key] = value;
+                });
 
-        $scope.set("$pages", $pages);
+                try {
+                    const compiledContents = await compile(
+                        page.contents,
+                        {
+                            components,
+                            environment: { global: environment },
+                        },
+                        {
+                            language: page.sourceType,
+                            path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
+                        },
+                    );
 
-        function get(map: DirectoryMap, key: string) {
-            if (!key.includes(".")) {
-                return map.get(key);
-            }
+                    await Filesystem.writeFile(page.path, compiledContents);
 
-            const [firstKey, ...remainingKeys] = key.split(".");
-
-            if (!map.has(firstKey)) {
-                return null;
-            }
-
-            const newMap = map.get(firstKey)! as DirectoryMap;
-            const newKey = remainingKeys.join(".");
-
-            return get(newMap, newKey);
-        }
-
-        const promises = pagesMappedToOutput.map(async page => {
-            await Filesystem.createDirectory(page.directory);
-
-            const nestedPath = page.sourceFile
-                .replace("/", "")
-                .replaceAll("/", ".");
-
-            const $page = get($pages, nestedPath)! as DirectoryMap;
-
-            $scope.set("$page", $page);
-
-            const environment: Environment = {
-                $page: $page,
-                $pages: $pages,
-            };
-
-            $page.forEach((value, key) => {
-                environment[key] = value;
+                    if (output) {
+                        Terminal.write("✓", page.path);
+                    }
+                } catch (error) {
+                    if (error instanceof CompilationError) {
+                        output = false;
+                        return Promise.reject(error.output); // Stop processing and output the error message
+                    } else {
+                        throw error;
+                    }
+                }
             });
 
             try {
-                const compiledContents = await compile(
-                    page.contents,
-                    {
-                        components,
-                        environment: { global: environment },
-                    },
-                    {
-                        language: page.sourceType,
-                        path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
-                    },
-                );
-
-                await Filesystem.writeFile(page.path, compiledContents);
-
-                if (output) {
-                    Terminal.write("✓", page.path);
-                }
+                await Promise.all(promises);
             } catch (error) {
-                if (error instanceof CompilationError) {
-                    return Promise.reject(error.output); // Stop processing and output the error message
-                } else {
+                if (throws) {
                     throw error;
+                } else {
+                    console.error(error);
                 }
             }
-        });
-
-        await Promise.all(promises);
+        } catch (error) {
+            if (throws) {
+                throw error;
+            } else {
+                console.error(error);
+            }
+        }
 
         await Filesystem.copyDirectoryContents(
             assetsDirectory,
