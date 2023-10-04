@@ -4,8 +4,12 @@ import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
 import { compile, extractData, CompilationError } from "@paperstack/stencil";
-import { first } from "lodash";
-import { DuplicatePagesError } from "@/Errors/DuplicatePagesError";
+import { first, groupBy, unionBy } from "lodash";
+
+import { ReservedComponentName } from "@/Errors/ReservedComponentName";
+import { DuplicateComponentName } from "@/Errors/DuplicateComponentName";
+import { DuplicatePagesFromExtensionError } from "@/Errors/DuplicatePagesFromExtensionError";
+import { DuplicatePagesFromFileAndFolderError } from "@/Errors/DuplicatePagesFromFileAndFolderError";
 
 declare global {
     interface Map<K, V> {
@@ -63,105 +67,177 @@ export default class Build extends Command {
         output: providedOutput = true,
         throws = false,
     }: Options): Promise<void> {
-        let output = providedOutput;
-        const pagesDirectory = Path.getPagesDirectory();
-        const assetsDirectory = Path.getAssetsDirectory();
-        const componentsDirectory = Path.getComponentsDirectory();
-        const outputDirectory = Path.getOutputDirectory();
+        try {
+            let output = providedOutput;
+            const pagesDirectory = Path.getPagesDirectory();
+            const assetsDirectory = Path.getAssetsDirectory();
+            const componentsDirectory = Path.getComponentsDirectory();
+            const outputDirectory = Path.getOutputDirectory();
 
-        const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
-        const componentsDirectoryExists = await Filesystem.exists(
-            componentsDirectory,
-        );
-
-        if (!pagesDirectoryExists) {
-            throw new Error(
-                "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
-            );
-        }
-
-        if (!componentsDirectoryExists) {
-            throw new Error(
-                "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
-            );
-        }
-
-        const pages = await Filesystem.files(pagesDirectory);
-        const pathsWithoutExtension = pages
-            .map(page => page.path)
-            .map(path => Path.removeExtension(path));
-
-        const duplicatePaths = pathsWithoutExtension.filter(
-            (path, index, array) => {
-                return array.indexOf(path) !== index;
-            },
-        );
-
-        if (duplicatePaths.length > 0) {
-            const path = duplicatePaths[0];
-
-            throw new DuplicatePagesError();
-        }
-
-        await Filesystem.removeDirectory(outputDirectory);
-        await Filesystem.createDirectory(outputDirectory);
-
-        const pagesMappedToOutput = pages.map(file => {
-            const outputPath =
-                file.name === "Index"
-                    ? file.directory
-                    : Path.buildPath(file.directory, file.name);
-
-            const relativePath = Path.slugify(
-                Path.subtract(outputPath, pagesDirectory),
-            );
-
-            const directory = Path.concatenate(outputDirectory, relativePath);
-            const name = "index";
-            const path = Path.buildPath(
-                directory,
-                Path.buildFileName(name, "html"),
-            );
-            const fileExtension = Path.getExtension(file.path);
-            const sourceType =
-                fileExtension === "stencil" ? "stencil" : "markdown";
-            const sourceFile = Path.subtract(
-                file.path,
+            const pagesDirectoryExists = await Filesystem.exists(
                 pagesDirectory,
-                ".",
-                fileExtension,
+            );
+            const componentsDirectoryExists = await Filesystem.exists(
+                componentsDirectory,
             );
 
-            return {
-                ...file,
-                sourceType,
-                sourceFile,
-                sourceFileExtension: fileExtension,
-                directory,
-                path,
-                name,
-                type: "html" as "html",
-            };
-        });
+            if (!pagesDirectoryExists) {
+                throw new Error(
+                    "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
+                );
+            }
 
-        const componentFiles = await Filesystem.files(componentsDirectory);
-        const components = Object.fromEntries(
-            componentFiles.map(file => {
-                return [file.name, file.contents];
-            }),
-        );
+            if (!componentsDirectoryExists) {
+                throw new Error(
+                    "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
+                );
+            }
 
-        if (output) {
-            Terminal.clear();
-            Terminal.write("Building site...");
-            Terminal.line();
-        }
+            const pages = await Filesystem.files(pagesDirectory);
 
-        let $scope = new Map();
+            await Filesystem.removeDirectory(outputDirectory);
+            await Filesystem.createDirectory(outputDirectory);
 
-        let pagesObjectArrayPromises: Promise<PageMap>[] =
-            pagesMappedToOutput.map(async item => {
-                try {
+            const pagesMappedToOutput = pages.map(file => {
+                const outputPath =
+                    file.name === "Index"
+                        ? file.directory
+                        : Path.buildPath(file.directory, file.name);
+
+                const relativePath = Path.slugify(
+                    Path.subtract(outputPath, pagesDirectory),
+                );
+
+                const directory = Path.concatenate(
+                    outputDirectory,
+                    relativePath,
+                );
+                const name = "index";
+                const path = Path.buildPath(
+                    directory,
+                    Path.buildFileName(name, "html"),
+                );
+                const fileExtension = Path.getExtension(file.path);
+                const sourceType =
+                    fileExtension === "stencil" ? "stencil" : "markdown";
+                const sourceFile = Path.subtract(
+                    file.path,
+                    pagesDirectory,
+                    ".",
+                    fileExtension,
+                );
+                const urlPath = Path.subtract(
+                    path,
+                    outputDirectory,
+                    "index.html",
+                );
+
+                return {
+                    ...file,
+                    sourceType,
+                    sourceFile,
+                    sourceFileExtension: fileExtension,
+                    directory,
+                    path,
+                    name,
+                    urlPath,
+                    type: "html" as "html",
+                };
+            });
+
+            // Check whether there are files + folders that will result in duplicate pages
+            // I.e. Pages/Articles.stencil and Pages/Articles/Index.md
+            pagesMappedToOutput.forEach((page, index) => {
+                if (page.sourceFile.endsWith("Index")) {
+                    return;
+                }
+
+                const conflict = pagesMappedToOutput.find(
+                    (other, otherIndex) => {
+                        const isIndexSourceFile =
+                            other.sourceFile === `${page.sourceFile}/Index`;
+
+                        return isIndexSourceFile && index !== otherIndex;
+                    },
+                );
+
+                if (conflict) {
+                    throw new DuplicatePagesFromFileAndFolderError(
+                        page.urlPath,
+                        `Pages${page.sourceFile}.${page.sourceFileExtension}`,
+                        `Pages${conflict.sourceFile}.${conflict.sourceFileExtension}`,
+                    );
+                }
+            });
+
+            // Check whether there are pages with the same name but different suffix
+            // I.e. Index.md, Index.mds and Index.stencil
+            const duplicatePages = pagesMappedToOutput.filter((page, index) =>
+                pagesMappedToOutput.some((other, otherIndex) => {
+                    return page.path === other.path && index !== otherIndex;
+                }),
+            );
+            if (duplicatePages.length) {
+                // Make sure we're only working with 1 set of duplicate pages
+                let pages = duplicatePages.filter(
+                    page => page.path === duplicatePages[0].path,
+                );
+
+                throw new DuplicatePagesFromExtensionError(
+                    pages[0].urlPath,
+                    pages.map(
+                        page =>
+                            `Pages${page.sourceFile}.${page.sourceFileExtension}`,
+                    ),
+                );
+            }
+
+            const componentFiles = await Filesystem.files(componentsDirectory);
+
+            const componentsWithReservedNames = componentFiles.filter(file =>
+                ["Component", "Data"].includes(file.name),
+            );
+            if (componentsWithReservedNames.length) {
+                throw new ReservedComponentName(
+                    componentsWithReservedNames[0].name,
+                    Path.getRelativePath(componentsWithReservedNames[0].path),
+                );
+            }
+
+            const duplicateComponents = componentFiles.filter(
+                (component, index) =>
+                    componentFiles.some((other, otherIndex) => {
+                        return (
+                            component.name === other.name &&
+                            index !== otherIndex
+                        );
+                    }),
+            );
+
+            if (duplicateComponents.length) {
+                throw new DuplicateComponentName(
+                    duplicateComponents[0].name,
+                    duplicateComponents.map(component =>
+                        Path.getRelativePath(component.path),
+                    ),
+                );
+            }
+            const components = Object.fromEntries(
+                componentFiles.map(file => {
+                    return [file.name, file.contents];
+                }),
+            );
+
+            if (output) {
+                Terminal.clear();
+                Terminal.write("Building site...");
+                Terminal.line();
+            }
+
+            let $scope = new Map();
+
+            let pagesObjectArrayPromises: Promise<PageMap>[] =
+                pagesMappedToOutput.map(async item => {
                     const path = Path.subtract(
                         item.path,
                         outputDirectory,
@@ -192,17 +268,8 @@ export default class Build extends Command {
                     page.set("$data", data);
 
                     return page;
-                } catch (error) {
-                    if (error instanceof CompilationError) {
-                        output = false;
-                        return Promise.reject(error.output); // Stop processing and output the error message
-                    } else {
-                        throw error;
-                    }
-                }
-            });
+                });
 
-        try {
             let pagesObjectArray: PageMap[] = await Promise.all(
                 pagesObjectArrayPromises,
             );
@@ -372,65 +439,51 @@ export default class Build extends Command {
                     environment[key] = value;
                 });
 
-                try {
-                    const compiledContents = await compile(
-                        page.contents,
-                        {
-                            components,
-                            environment: { global: environment },
-                        },
-                        {
-                            language: page.sourceType,
-                            path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
-                        },
-                    );
+                const compiledContents = await compile(
+                    page.contents,
+                    {
+                        components,
+                        environment: { global: environment },
+                    },
+                    {
+                        language: page.sourceType,
+                        path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
+                    },
+                );
 
-                    await Filesystem.writeFile(page.path, compiledContents);
+                await Filesystem.writeFile(page.path, compiledContents);
 
-                    if (output) {
-                        Terminal.write("✓", page.path);
-                    }
-                } catch (error) {
-                    if (error instanceof CompilationError) {
-                        output = false;
-                        return Promise.reject(error.output); // Stop processing and output the error message
-                    } else {
-                        throw error;
-                    }
+                if (output) {
+                    Terminal.write("✓", page.path);
                 }
             });
 
-            try {
-                await Promise.all(promises);
-            } catch (error) {
-                if (throws) {
-                    Terminal.clear();
-                    throw error;
-                } else {
-                    console.error(error);
-                }
+            await Promise.all(promises);
+
+            await Filesystem.copyDirectoryContents(
+                assetsDirectory,
+                outputDirectory,
+            );
+
+            if (output) {
+                Terminal.write("✓", "Copied assets");
             }
-        } catch (error) {
+
+            if (output) {
+                Terminal.line();
+                Terminal.write("Build completed");
+            }
+        } catch (error: any) {
+            if (!error.output) {
+                throw error;
+            }
+
             if (throws) {
                 Terminal.clear();
-                throw error;
+                throw error.output;
             } else {
-                console.error(error);
+                console.error(error.output);
             }
-        }
-
-        await Filesystem.copyDirectoryContents(
-            assetsDirectory,
-            outputDirectory,
-        );
-
-        if (output) {
-            Terminal.write("✓", "Copied assets");
-        }
-
-        if (output) {
-            Terminal.line();
-            Terminal.write("Build completed");
         }
     }
 

@@ -40,6 +40,12 @@ export function getAssetsDirectory() {
     return buildPath(root, "Assets");
 }
 
+export function getRelativePath(path: string): string {
+    const root = getRootDirectory();
+
+    return subtract(path, root, "/");
+}
+
 export function getExtension(path: string): string {
     const extension = nodePath.extname(path);
 
