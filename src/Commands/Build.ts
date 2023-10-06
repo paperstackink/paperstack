@@ -368,7 +368,7 @@ export default class Build extends Command {
                 return { pages, allPages, directories, allDirectories };
             }
 
-            $pages = $pages.map((map, key) => {
+            function setSubRecordsForEntry(map: any, key: string) {
                 if (!(map instanceof Map)) {
                     return map;
                 }
@@ -376,6 +376,8 @@ export default class Build extends Command {
                 if (!map.get("isDirectory")) {
                     return map;
                 }
+
+                map.map(setSubRecordsForEntry);
 
                 const { pages, allPages, directories, allDirectories } =
                     getSubRecords(map);
@@ -386,7 +388,9 @@ export default class Build extends Command {
                 map.set("allDirectories", allDirectories);
 
                 return map;
-            });
+            }
+
+            $pages = $pages.map(setSubRecordsForEntry);
 
             const {
                 pages: pagesAlt,
