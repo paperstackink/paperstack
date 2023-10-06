@@ -36,7 +36,10 @@ export default class Create extends Command {
 
         Filesystem.removeDirectory(gitFolderPath);
 
+        await exec(`rm -rf package-lock.json`, { cwd: path });
         await exec(`git init`, { cwd: path });
+        await exec(`git add .`, { cwd: path });
+        await exec(`git commit -m "Init"`, { cwd: path });
 
         await exec(`npm install`, { cwd: path });
 

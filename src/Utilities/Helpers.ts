@@ -19,3 +19,7 @@ export function mapFromObject(object: PlainObject): Map<string, Value> {
 
     return new Map(entries);
 }
+
+export function match<T>(key: string, object: { [key: string]: T }): T {
+    return object[key] || object["default"];
+}

@@ -3,9 +3,13 @@ import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
 import { Command } from "@/Commands/Command";
 
-import { compile, extractData } from "@paperstack/stencil";
-import { first } from "lodash";
-import { DuplicatePagesError } from "@/Errors/DuplicatePagesError";
+import { compile, extractData, CompilationError } from "@paperstack/stencil";
+import { first, groupBy, unionBy } from "lodash";
+
+import { ReservedComponentName } from "@/Errors/ReservedComponentName";
+import { DuplicateComponentName } from "@/Errors/DuplicateComponentName";
+import { DuplicatePagesFromExtensionError } from "@/Errors/DuplicatePagesFromExtensionError";
+import { DuplicatePagesFromFileAndFolderError } from "@/Errors/DuplicatePagesFromFileAndFolderError";
 
 declare global {
     interface Map<K, V> {
@@ -26,6 +30,7 @@ Map.prototype.map = function <K, V, T>(
 
 type Options = {
     output?: boolean;
+    throws?: boolean;
 };
 
 type Page = {
@@ -58,333 +63,427 @@ export default class Build extends Command {
     static command = "build";
     static description = "Build project";
 
-    async handle({ output = true }: Options): Promise<void> {
-        const pagesDirectory = Path.getPagesDirectory();
-        const assetsDirectory = Path.getAssetsDirectory();
-        const componentsDirectory = Path.getComponentsDirectory();
-        const outputDirectory = Path.getOutputDirectory();
+    async handle({
+        output: providedOutput = true,
+        throws = false,
+    }: Options): Promise<void> {
+        try {
+            let output = providedOutput;
+            const pagesDirectory = Path.getPagesDirectory();
+            const assetsDirectory = Path.getAssetsDirectory();
+            const componentsDirectory = Path.getComponentsDirectory();
+            const outputDirectory = Path.getOutputDirectory();
 
-        const pagesDirectoryExists = await Filesystem.exists(pagesDirectory);
-        const componentsDirectoryExists = await Filesystem.exists(
-            componentsDirectory,
-        );
-
-        if (!pagesDirectoryExists) {
-            throw new Error(
-                "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
-            );
-        }
-
-        if (!componentsDirectoryExists) {
-            throw new Error(
-                "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
-            );
-        }
-
-        const pages = await Filesystem.files(pagesDirectory);
-        const pathsWithoutExtension = pages
-            .map(page => page.path)
-            .map(path => Path.removeExtension(path));
-
-        const duplicatePaths = pathsWithoutExtension.filter(
-            (path, index, array) => {
-                return array.indexOf(path) !== index;
-            },
-        );
-
-        if (duplicatePaths.length > 0) {
-            const path = duplicatePaths[0];
-
-            throw new DuplicatePagesError();
-        }
-
-        await Filesystem.removeDirectory(outputDirectory);
-        await Filesystem.createDirectory(outputDirectory);
-
-        const pagesMappedToOutput = pages.map(file => {
-            const outputPath =
-                file.name === "Index"
-                    ? file.directory
-                    : Path.buildPath(file.directory, file.name);
-
-            const relativePath = Path.slugify(
-                Path.subtract(outputPath, pagesDirectory),
-            );
-
-            const directory = Path.concatenate(outputDirectory, relativePath);
-            const name = "index";
-            const path = Path.buildPath(
-                directory,
-                Path.buildFileName(name, "html"),
-            );
-            const fileExtension = Path.getExtension(file.path);
-            const sourceType =
-                fileExtension === "stencil" ? "stencil" : "markdown";
-            const sourceFile = Path.subtract(
-                file.path,
+            const pagesDirectoryExists = await Filesystem.exists(
                 pagesDirectory,
-                ".",
-                fileExtension,
+            );
+            const componentsDirectoryExists = await Filesystem.exists(
+                componentsDirectory,
             );
 
-            return {
-                ...file,
-                sourceType,
-                sourceFile,
-                directory,
-                path,
-                name,
-                type: "html" as "html",
-            };
-        });
+            if (!pagesDirectoryExists) {
+                throw new Error(
+                    "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
+                );
+            }
 
-        const componentFiles = await Filesystem.files(componentsDirectory);
-        const components = Object.fromEntries(
-            componentFiles.map(file => {
-                return [file.name, file.contents];
-            }),
-        );
+            if (!componentsDirectoryExists) {
+                throw new Error(
+                    "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
+                );
+            }
 
-        if (output) {
-            Terminal.clear();
-            Terminal.write("Building site...");
-            Terminal.line();
-        }
+            const pages = await Filesystem.files(pagesDirectory);
 
-        let $scope = new Map();
+            await Filesystem.removeDirectory(outputDirectory);
+            await Filesystem.createDirectory(outputDirectory);
 
-        let pagesObjectArrayPromises: Promise<PageMap>[] =
-            pagesMappedToOutput.map(async item => {
-                const path = Path.subtract(
-                    item.path,
+            const pagesMappedToOutput = pages.map(file => {
+                const outputPath =
+                    file.name === "Index"
+                        ? file.directory
+                        : Path.buildPath(file.directory, file.name);
+
+                const relativePath = Path.slugify(
+                    Path.subtract(outputPath, pagesDirectory),
+                );
+
+                const directory = Path.concatenate(
+                    outputDirectory,
+                    relativePath,
+                );
+                const name = "index";
+                const path = Path.buildPath(
+                    directory,
+                    Path.buildFileName(name, "html"),
+                );
+                const fileExtension = Path.getExtension(file.path);
+                const sourceType =
+                    fileExtension === "stencil" ? "stencil" : "markdown";
+                const sourceFile = Path.subtract(
+                    file.path,
+                    pagesDirectory,
+                    ".",
+                    fileExtension,
+                );
+                const urlPath = Path.subtract(
+                    path,
                     outputDirectory,
                     "index.html",
                 );
-                const slug =
-                    path
-                        .split("/")
-                        .filter(piece => piece)
-                        .pop() || "";
-                const name = item.sourceFile.split("/").pop();
-                const nestedPath = item.sourceFile
+
+                return {
+                    ...file,
+                    sourceType,
+                    sourceFile,
+                    sourceFileExtension: fileExtension,
+                    directory,
+                    path,
+                    name,
+                    urlPath,
+                    type: "html" as "html",
+                };
+            });
+
+            // Check whether there are files + folders that will result in duplicate pages
+            // I.e. Pages/Articles.stencil and Pages/Articles/Index.md
+            pagesMappedToOutput.forEach((page, index) => {
+                if (page.sourceFile.endsWith("Index")) {
+                    return;
+                }
+
+                const conflict = pagesMappedToOutput.find(
+                    (other, otherIndex) => {
+                        const isIndexSourceFile =
+                            other.sourceFile === `${page.sourceFile}/Index`;
+
+                        return isIndexSourceFile && index !== otherIndex;
+                    },
+                );
+
+                if (conflict) {
+                    throw new DuplicatePagesFromFileAndFolderError(
+                        page.urlPath,
+                        `Pages${page.sourceFile}.${page.sourceFileExtension}`,
+                        `Pages${conflict.sourceFile}.${conflict.sourceFileExtension}`,
+                    );
+                }
+            });
+
+            // Check whether there are pages with the same name but different suffix
+            // I.e. Index.md, Index.mds and Index.stencil
+            const duplicatePages = pagesMappedToOutput.filter((page, index) =>
+                pagesMappedToOutput.some((other, otherIndex) => {
+                    return page.path === other.path && index !== otherIndex;
+                }),
+            );
+            if (duplicatePages.length) {
+                // Make sure we're only working with 1 set of duplicate pages
+                let pages = duplicatePages.filter(
+                    page => page.path === duplicatePages[0].path,
+                );
+
+                throw new DuplicatePagesFromExtensionError(
+                    pages[0].urlPath,
+                    pages.map(
+                        page =>
+                            `Pages${page.sourceFile}.${page.sourceFileExtension}`,
+                    ),
+                );
+            }
+
+            const componentFiles = await Filesystem.files(componentsDirectory);
+
+            const componentsWithReservedNames = componentFiles.filter(file =>
+                ["Component", "Data"].includes(file.name),
+            );
+            if (componentsWithReservedNames.length) {
+                throw new ReservedComponentName(
+                    componentsWithReservedNames[0].name,
+                    Path.getRelativePath(componentsWithReservedNames[0].path),
+                );
+            }
+
+            const duplicateComponents = componentFiles.filter(
+                (component, index) =>
+                    componentFiles.some((other, otherIndex) => {
+                        return (
+                            component.name === other.name &&
+                            index !== otherIndex
+                        );
+                    }),
+            );
+
+            if (duplicateComponents.length) {
+                throw new DuplicateComponentName(
+                    duplicateComponents[0].name,
+                    duplicateComponents.map(component =>
+                        Path.getRelativePath(component.path),
+                    ),
+                );
+            }
+            const components = Object.fromEntries(
+                componentFiles.map(file => {
+                    return [file.name, file.contents];
+                }),
+            );
+
+            if (output) {
+                Terminal.clear();
+                Terminal.write("Building site...");
+                Terminal.line();
+            }
+
+            let $scope = new Map();
+
+            let pagesObjectArrayPromises: Promise<PageMap>[] =
+                pagesMappedToOutput.map(async item => {
+                    const path = Path.subtract(
+                        item.path,
+                        outputDirectory,
+                        "index.html",
+                    );
+                    const slug =
+                        path
+                            .split("/")
+                            .filter(piece => piece)
+                            .pop() || "";
+                    const name = item.sourceFile.split("/").pop();
+                    const nestedPath = item.sourceFile
+                        .replace("/", "")
+                        .replaceAll("/", ".");
+
+                    const data: PageMap = await extractData(item.contents, {
+                        language: item.sourceType,
+                        path: `Pages/${nestedPath}.${item.sourceFileExtension}`,
+                    });
+                    const page = new Map([...data]);
+
+                    page.set("path", path);
+                    page.set("slug", slug);
+                    page.set("name", name);
+                    page.set("isPage", true);
+                    page.set("isDirectory", false);
+                    page.set("nestedPath", nestedPath);
+                    page.set("$data", data);
+
+                    return page;
+                });
+
+            let pagesObjectArray: PageMap[] = await Promise.all(
+                pagesObjectArrayPromises,
+            );
+
+            let $pages = new Map();
+
+            $pages.set("isPage", false);
+            $pages.set("isDirectory", true);
+
+            function set(
+                map: DirectoryMap,
+                key: string,
+                page: PageMap,
+            ): DirectoryMap {
+                if (!key.includes(".")) {
+                    map.set(key, page);
+
+                    return map;
+                }
+
+                const newMapKey = key.split(".").shift()!;
+
+                if (!map.has(newMapKey)) {
+                    const newMap = new Map();
+                    const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                    newMap.set("isPage", false);
+                    newMap.set("isDirectory", true);
+
+                    map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                    return map;
+                } else {
+                    const newMap = map.get(newMapKey)! as DirectoryMap;
+                    const newNestedKey = key.replace(`${newMapKey}.`, "");
+
+                    map.set(newMapKey, set(newMap, newNestedKey, page));
+
+                    return map;
+                }
+            }
+
+            pagesObjectArray.forEach(page => {
+                const nestedPath = page.get("nestedPath");
+                page.delete("nestedPath");
+
+                if (typeof nestedPath === "string") {
+                    $pages = set($pages, nestedPath, page);
+                }
+            });
+
+            function getSubRecords(directory: DirectoryMap) {
+                let pages = new Map();
+                let allPages = new Map();
+                let directories = new Map();
+                let allDirectories = new Map();
+
+                for (const entry of directory.entries()) {
+                    const key = entry[0];
+                    const value = entry[1];
+
+                    if (!(value instanceof Map)) {
+                        continue;
+                    }
+
+                    if (value.get("isPage")) {
+                        pages.set(key, value);
+                        allPages.set(key, value);
+                    }
+
+                    if (value.get("isDirectory")) {
+                        directories.set(key, value);
+                        allDirectories.set(key, value);
+
+                        const {
+                            allPages: nestedAllPages,
+                            allDirectories: nestedAllDirectories,
+                        } = getSubRecords(value as DirectoryMap);
+
+                        for (const nestedPageEntry of nestedAllPages) {
+                            allPages.set(
+                                `${key}.${nestedPageEntry[0]}`,
+                                nestedPageEntry[1],
+                            );
+                        }
+
+                        for (const nestedDirectoryEntry of nestedAllDirectories) {
+                            allDirectories.set(
+                                `${key}.${nestedDirectoryEntry[0]}`,
+                                nestedDirectoryEntry[1],
+                            );
+                        }
+                    }
+                }
+
+                return { pages, allPages, directories, allDirectories };
+            }
+
+            $pages = $pages.map((map, key) => {
+                if (!(map instanceof Map)) {
+                    return map;
+                }
+
+                if (!map.get("isDirectory")) {
+                    return map;
+                }
+
+                const { pages, allPages, directories, allDirectories } =
+                    getSubRecords(map);
+
+                map.set("pages", pages);
+                map.set("allPages", allPages);
+                map.set("directories", directories);
+                map.set("allDirectories", allDirectories);
+
+                return map;
+            });
+
+            const {
+                pages: pagesAlt,
+                allPages,
+                directories,
+                allDirectories,
+            } = getSubRecords($pages);
+
+            $pages.set("pages", pagesAlt);
+            $pages.set("allPages", allPages);
+            $pages.set("directories", directories);
+            $pages.set("allDirectories", allDirectories);
+
+            $scope.set("$pages", $pages);
+
+            function get(map: DirectoryMap, key: string) {
+                if (!key.includes(".")) {
+                    return map.get(key);
+                }
+
+                const [firstKey, ...remainingKeys] = key.split(".");
+
+                if (!map.has(firstKey)) {
+                    return null;
+                }
+
+                const newMap = map.get(firstKey)! as DirectoryMap;
+                const newKey = remainingKeys.join(".");
+
+                return get(newMap, newKey);
+            }
+
+            const promises = pagesMappedToOutput.map(async page => {
+                await Filesystem.createDirectory(page.directory);
+
+                const nestedPath = page.sourceFile
                     .replace("/", "")
                     .replaceAll("/", ".");
 
-                const data: PageMap = await extractData(item.contents, {
-                    type: item.sourceType,
+                const $page = get($pages, nestedPath)! as DirectoryMap;
+
+                $scope.set("$page", $page);
+
+                const environment: Environment = {
+                    $page: $page,
+                    $pages: $pages,
+                };
+
+                $page.forEach((value, key) => {
+                    environment[key] = value;
                 });
-                const page = new Map([...data]);
 
-                page.set("path", path);
-                page.set("slug", slug);
-                page.set("name", name);
-                page.set("isPage", true);
-                page.set("isDirectory", false);
-                page.set("nestedPath", nestedPath);
-                page.set("$data", data);
+                const compiledContents = await compile(
+                    page.contents,
+                    {
+                        components,
+                        environment: { global: environment },
+                    },
+                    {
+                        language: page.sourceType,
+                        path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
+                    },
+                );
 
-                return page;
+                await Filesystem.writeFile(page.path, compiledContents);
+
+                if (output) {
+                    Terminal.write("✓", page.path);
+                }
             });
 
-        let pagesObjectArray: PageMap[] = await Promise.all(
-            pagesObjectArrayPromises,
-        );
+            await Promise.all(promises);
 
-        let $pages = new Map();
-
-        $pages.set("isPage", false);
-        $pages.set("isDirectory", true);
-
-        function set(
-            map: DirectoryMap,
-            key: string,
-            page: PageMap,
-        ): DirectoryMap {
-            if (!key.includes(".")) {
-                map.set(key, page);
-
-                return map;
-            }
-
-            const newMapKey = key.split(".").shift()!;
-
-            if (!map.has(newMapKey)) {
-                const newMap = new Map();
-                const newNestedKey = key.replace(`${newMapKey}.`, "");
-
-                newMap.set("isPage", false);
-                newMap.set("isDirectory", true);
-
-                map.set(newMapKey, set(newMap, newNestedKey, page));
-
-                return map;
-            } else {
-                const newMap = map.get(newMapKey)! as DirectoryMap;
-                const newNestedKey = key.replace(`${newMapKey}.`, "");
-
-                map.set(newMapKey, set(newMap, newNestedKey, page));
-
-                return map;
-            }
-        }
-
-        pagesObjectArray.forEach(page => {
-            const nestedPath = page.get("nestedPath");
-            page.delete("nestedPath");
-
-            if (typeof nestedPath === "string") {
-                $pages = set($pages, nestedPath, page);
-            }
-        });
-
-        function getSubRecords(directory: DirectoryMap) {
-            let pages = new Map();
-            let allPages = new Map();
-            let directories = new Map();
-            let allDirectories = new Map();
-
-            for (const entry of directory.entries()) {
-                const key = entry[0];
-                const value = entry[1];
-
-                if (!(value instanceof Map)) {
-                    continue;
-                }
-
-                if (value.get("isPage")) {
-                    pages.set(key, value);
-                    allPages.set(key, value);
-                }
-
-                if (value.get("isDirectory")) {
-                    directories.set(key, value);
-                    allDirectories.set(key, value);
-
-                    const {
-                        allPages: nestedAllPages,
-                        allDirectories: nestedAllDirectories,
-                    } = getSubRecords(value as DirectoryMap);
-
-                    for (const nestedPageEntry of nestedAllPages) {
-                        allPages.set(
-                            `${key}.${nestedPageEntry[0]}`,
-                            nestedPageEntry[1],
-                        );
-                    }
-
-                    for (const nestedDirectoryEntry of nestedAllDirectories) {
-                        allDirectories.set(
-                            `${key}.${nestedDirectoryEntry[0]}`,
-                            nestedDirectoryEntry[1],
-                        );
-                    }
-                }
-            }
-
-            return { pages, allPages, directories, allDirectories };
-        }
-
-        $pages = $pages.map((map, key) => {
-            if (!(map instanceof Map)) {
-                return map;
-            }
-
-            if (!map.get("isDirectory")) {
-                return map;
-            }
-
-            const { pages, allPages, directories, allDirectories } =
-                getSubRecords(map);
-
-            map.set("pages", pages);
-            map.set("allPages", allPages);
-            map.set("directories", directories);
-            map.set("allDirectories", allDirectories);
-
-            return map;
-        });
-
-        const {
-            pages: pagesAlt,
-            allPages,
-            directories,
-            allDirectories,
-        } = getSubRecords($pages);
-
-        $pages.set("pages", pagesAlt);
-        $pages.set("allPages", allPages);
-        $pages.set("directories", directories);
-        $pages.set("allDirectories", allDirectories);
-
-        $scope.set("$pages", $pages);
-
-        function get(map: DirectoryMap, key: string) {
-            if (!key.includes(".")) {
-                return map.get(key);
-            }
-
-            const [firstKey, ...remainingKeys] = key.split(".");
-
-            if (!map.has(firstKey)) {
-                return null;
-            }
-
-            const newMap = map.get(firstKey)! as DirectoryMap;
-            const newKey = remainingKeys.join(".");
-
-            return get(newMap, newKey);
-        }
-
-        const promises = pagesMappedToOutput.map(async page => {
-            await Filesystem.createDirectory(page.directory);
-
-            const nestedPath = page.sourceFile
-                .replace("/", "")
-                .replaceAll("/", ".");
-
-            const $page = get($pages, nestedPath)! as DirectoryMap;
-
-            $scope.set("$page", $page);
-
-            const environment: Environment = {
-                $page: $page,
-                $pages: $pages,
-            };
-
-            $page.forEach((value, key) => {
-                environment[key] = value;
-            });
-
-            const compiledContents = await compile(
-                page.contents,
-                {
-                    components,
-                    environment: { global: environment },
-                },
-                { language: page.sourceType },
+            await Filesystem.copyDirectoryContents(
+                assetsDirectory,
+                outputDirectory,
             );
 
-            await Filesystem.writeFile(page.path, compiledContents);
+            if (output) {
+                Terminal.write("✓", "Copied assets");
+            }
 
             if (output) {
-                Terminal.write("✓", page.path);
+                Terminal.line();
+                Terminal.write("Build completed");
             }
-        });
+        } catch (error: any) {
+            if (!error.output) {
+                throw error;
+            }
 
-        await Promise.all(promises);
-
-        await Filesystem.copyDirectoryContents(
-            assetsDirectory,
-            outputDirectory,
-        );
-
-        if (output) {
-            Terminal.write("✓", "Copied assets");
-        }
-
-        if (output) {
-            Terminal.line();
-            Terminal.write("Build completed");
+            if (throws) {
+                Terminal.clear();
+                throw error.output;
+            } else {
+                console.error(error.output);
+            }
         }
     }
 
