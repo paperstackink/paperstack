@@ -1,10 +1,11 @@
 import * as Path from "@/Utilities/Path";
 import * as Terminal from "@/Utilities/Terminal";
 import * as Filesystem from "@/Utilities/Filesystem";
+import fs from "node:fs/promises";
 import { Command } from "@/Commands/Command";
+import { cosmiconfig } from "cosmiconfig";
 
 import { compile, extractData, CompilationError } from "@paperstack/stencil";
-import { first, groupBy, unionBy } from "lodash";
 
 import { ReservedComponentName } from "@/Errors/ReservedComponentName";
 import { DuplicateComponentName } from "@/Errors/DuplicateComponentName";
@@ -59,6 +60,15 @@ type Environment = {
     [key: string]: any;
 };
 
+type MarkdownConfig = {
+    linkHeadlines: null | "wrap" | "after" | "append" | "before" | "prepend";
+};
+
+type Config = {
+    markdown?: MarkdownConfig;
+    [key: string]: any;
+};
+
 export default class Build extends Command {
     static command = "build";
     static description = "Build project";
@@ -73,6 +83,7 @@ export default class Build extends Command {
             const assetsDirectory = Path.getAssetsDirectory();
             const componentsDirectory = Path.getComponentsDirectory();
             const outputDirectory = Path.getOutputDirectory();
+            const configDirectory = Path.getConfigDirectory();
 
             const pagesDirectoryExists = await Filesystem.exists(
                 pagesDirectory,
@@ -423,6 +434,22 @@ export default class Build extends Command {
                 return get(newMap, newKey);
             }
 
+            const configFiles = await fs.readdir(configDirectory);
+            let config: Config = {};
+
+            const configPromises = configFiles.map(async file => {
+                const name = file.replace(".js", "").toLowerCase();
+                const path = Path.buildPath(configDirectory, file);
+                const explorer = cosmiconfig(name);
+                const loaded = await explorer.load(path);
+
+                if (loaded) {
+                    config[name] = loaded.config;
+                }
+            });
+
+            await Promise.all(configPromises);
+
             const promises = pagesMappedToOutput.map(async page => {
                 await Filesystem.createDirectory(page.directory);
 
@@ -446,6 +473,7 @@ export default class Build extends Command {
                 const compiledContents = await compile(
                     page.contents,
                     {
+                        config,
                         components,
                         environment: { global: environment },
                     },
@@ -505,17 +533,4 @@ export default class Build extends Command {
 
         Terminal.write("Options: This command has no options");
     }
-}
-
-function addPropertiesToDirectories(
-    map: Map<string, MapItem>,
-): Map<string, MapItem> {
-    if (map.get("isPage")) {
-        return map;
-    }
-
-    map.set("isPage", false);
-    map.set("isDirectory", true);
-
-    return map;
 }

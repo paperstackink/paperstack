@@ -5,7 +5,7 @@ type File = {
     directory: string;
     name: string;
     path: string; // directory + name
-    type: "stencil" | "html" | "unknown";
+    type: "stencil" | "markdown";
     contents: string;
 };
 
@@ -42,7 +42,7 @@ export async function files(path: string): Promise<File[]> {
             directory,
             name,
             path: path, // directory + name
-            type: "stencil" as "stencil",
+            type: type === "stencil" ? "stencil" : "markdown",
             contents: contents,
         };
 
