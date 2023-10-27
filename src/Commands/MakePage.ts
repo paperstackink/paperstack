@@ -9,8 +9,6 @@ export default class MakePage extends Command {
     static description = "Create a new page";
 
     async handle({ options }: { options: string[] }): Promise<void> {
-        Terminal.clear();
-
         if (options.length < 1) {
             Terminal.error(
                 "Please provide a path where the new component should be created",
@@ -39,8 +37,17 @@ export default class MakePage extends Command {
             path = `/Pages/${path}`;
         }
 
-        if (!path.endsWith(".stencil")) {
-            path = `${path}.stencil`;
+        const isMarkdown = options.some(piece =>
+            ["--markdown", "--mds", "--md"].includes(piece),
+        );
+
+        if (
+            ![".stencil", ".markdown", ".md", ".mds"].some(extension =>
+                path.endsWith(extension),
+            )
+        ) {
+            const extension = isMarkdown ? "mds" : "stencil";
+            path = `${path}.${extension}`;
         }
 
         const relativePath = path;
@@ -56,25 +63,10 @@ export default class MakePage extends Command {
             return;
         }
 
-        let content = "";
-
-        if (options.some(piece => piece.includes("--layout"))) {
-            const layoutFlagIndex = options.findIndex(piece =>
-                piece.includes("--layout"),
-            );
-
-            let layoutName = "";
-
-            if (options[layoutFlagIndex].includes("=")) {
-                layoutName = Strings.after(options[layoutFlagIndex], "=");
-            } else if (options.length >= layoutFlagIndex + 1) {
-                layoutName = options[layoutFlagIndex + 1];
-            }
-
-            if (layoutName) {
-                content = `<${layoutName}>\n    \n</${layoutName}>`;
-            }
-        }
+        const layout = this.getLayout(options);
+        const content = isMarkdown
+            ? this.getMarkdownContent(layout)
+            : this.getStencilContent(layout);
 
         const directory = Path.getDirectory(path);
 
@@ -87,7 +79,6 @@ export default class MakePage extends Command {
     async catch(): Promise<void> {}
 
     help(): void {
-        Terminal.clear();
         Terminal.write("Usage: paper make:page <path>");
         Terminal.line();
 
@@ -98,11 +89,61 @@ export default class MakePage extends Command {
         Terminal.write(
             `   path  |  The path to the new page or the URL of the new page`,
         );
+
+        Terminal.line();
+
+        Terminal.write("Flags: This command has 2 flags");
+        Terminal.write(
+            `   --layout    |  Includes the layout in the generated page`,
+        );
+        Terminal.write(`   --markdown  |  Makes the new page a markdown page`);
+
         Terminal.line();
 
         Terminal.write("Examples: ");
         Terminal.write(`   paper make:page /articles/how-to`);
         Terminal.write(`   paper make:page Articles/HowTo`);
         Terminal.write(`   paper make:page Articles/HowTo --layout=BaseLayout`);
+        Terminal.write(`   paper make:page Articles/HowTo --markdown`);
+    }
+
+    getLayout(options: string[]): string | null {
+        if (!options.some(piece => piece.includes("--layout"))) {
+            return null;
+        }
+
+        const layoutFlagIndex = options.findIndex(piece =>
+            piece.includes("--layout"),
+        );
+
+        let layout = "";
+
+        if (options[layoutFlagIndex].includes("=")) {
+            layout = Strings.after(options[layoutFlagIndex], "=");
+        } else if (options.length >= layoutFlagIndex + 1) {
+            layout = options[layoutFlagIndex + 1];
+        }
+
+        return layout || null;
+    }
+
+    getLayoutContent(layout: string): string {
+        return `<${layout}>\n    \n</${layout}>`;
+    }
+
+    getMarkdownContent(layout: string | null): string {
+        return `---
+template: ${layout || "Base"}
+---
+
+`;
+    }
+
+    getStencilContent(layout: string | null): string {
+        if (!layout) {
+            return "";
+        }
+
+        return this.getLayoutContent(layout);
     }
 }

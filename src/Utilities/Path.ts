@@ -5,45 +5,52 @@ export function getRootDirectory() {
     return nodePath.resolve(".");
 }
 
-// Note: This assumes the command is called from the project root
 export function getOutputDirectory() {
     const root = getRootDirectory();
 
     return buildPath(root, "Output");
 }
 
-// Note: This assumes the command is called from the project root
 export function getPagesDirectory() {
     const root = getRootDirectory();
 
     return buildPath(root, "Pages");
 }
 
-// Note: This assumes the command is called from the project root
 export function getComponentsDirectory() {
     const root = getRootDirectory();
 
     return buildPath(root, "Components");
 }
 
-// Note: This assumes the command is called from the project root
 export function getConfigDirectory() {
     const root = getRootDirectory();
 
     return buildPath(root, "Config");
 }
 
-// Note: This assumes the command is called from the project root
 export function getAssetsDirectory() {
     const root = getRootDirectory();
 
     return buildPath(root, "Assets");
 }
 
+export function getRelativePath(path: string): string {
+    const root = getRootDirectory();
+
+    return subtract(path, root, "/");
+}
+
 export function getExtension(path: string): string {
     const extension = nodePath.extname(path);
 
     return extension.replace(".", "");
+}
+
+export function removeExtension(path: string): string {
+    const extension = nodePath.extname(path);
+
+    return subtract(path, extension);
 }
 
 export function getFileName(path: string): string {

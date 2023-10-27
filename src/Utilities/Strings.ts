@@ -6,7 +6,14 @@ export function split(input: string, delimiter: string): string[] {
 }
 
 export function kebab(input: string): string {
-    return kebabCase(input);
+    const converted = kebabCase(input);
+
+    // kebabCase from Lodash adds a dash between letters and numbers: V0 -> v-0
+    // We want to avoid automatically doing that
+    // So we find all instances of '-n' and replace it with 'n'
+    const normalised = converted.replaceAll(/-([0,9]+)/g, "$1");
+
+    return normalised;
 }
 
 export function pascal(input: string): string {
