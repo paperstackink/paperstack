@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2023-10-27
+
+### Fixed
+
+-   Various issues with `paper create` command
+-   Fix issue where `pages`, `allPages` weren't properly set on nested records
+
+### Added
+
+-   Markdown support
+-   Better error messages
+-   Config files
+
 ## [0.5.0] - 2023-08-30
 
 ### Added
