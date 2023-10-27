@@ -32,6 +32,7 @@ Map.prototype.map = function <K, V, T>(
 type Options = {
     output?: boolean;
     throws?: boolean;
+    env?: "production" | "development";
 };
 
 type Page = {
@@ -76,6 +77,7 @@ export default class Build extends Command {
     async handle({
         output: providedOutput = true,
         throws = false,
+        env = "production",
     }: Options): Promise<void> {
         try {
             let output = providedOutput;
@@ -462,6 +464,7 @@ export default class Build extends Command {
                 $scope.set("$page", $page);
 
                 const environment: Environment = {
+                    environment: env,
                     $page: $page,
                     $pages: $pages,
                 };
