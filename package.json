@@ -1,7 +1,7 @@
 {
     "name": "@paperstack/paperstack",
-    "version": "0.5.0",
-    "description": "A simple, robust static site generator.",
+    "version": "0.6.0",
+    "description": "Static websites for the pragmatic programmer",
     "scripts": {
         "prettify": "node_modules/.bin/prettier . --write",
         "build": "rm -rf dist && tsc -noEmit && npx ts-node scripts/build.ts"
