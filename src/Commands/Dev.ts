@@ -18,8 +18,6 @@ async function startServer(port: string) {
             `./node_modules/.bin/http-server Output --port ${port} -c-1`,
         );
     } catch (error) {
-        console.error(error);
-
         return null;
     }
 }

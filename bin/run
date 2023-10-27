@@ -47,4 +47,7 @@ if (arguments.some(argument => ['--version', '-v', '-V'].includes(argument))) {
 } else {
   instance
     .handle({ options: arguments })
+    .catch(error => {
+      process.exit(1)
+    })
 }

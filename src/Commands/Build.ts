@@ -513,12 +513,9 @@ export default class Build extends Command {
                 throw error;
             }
 
-            if (throws) {
-                Terminal.clear();
-                throw error.output;
-            } else {
-                console.error(error.output);
-            }
+            console.error(error.output);
+
+            throw error;
         }
     }
 
