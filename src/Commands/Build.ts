@@ -7,6 +7,7 @@ import { cosmiconfig } from "cosmiconfig";
 
 import { compile, extractData, CompilationError } from "@paperstack/stencil";
 
+import { MissingDirectory } from "@/Errors/MissingDirectory";
 import { ReservedComponentName } from "@/Errors/ReservedComponentName";
 import { DuplicateComponentName } from "@/Errors/DuplicateComponentName";
 import { DuplicatePagesFromExtensionError } from "@/Errors/DuplicatePagesFromExtensionError";
@@ -93,17 +94,20 @@ export default class Build extends Command {
             const componentsDirectoryExists = await Filesystem.exists(
                 componentsDirectory,
             );
+            const configDirectoryExists = await Filesystem.exists(
+                configDirectory,
+            );
 
             if (!pagesDirectoryExists) {
-                throw new Error(
-                    "This directory contains no 'Pages' directory. Are you sure you are in the root of the project?",
-                );
+                throw new MissingDirectory("Pages");
             }
 
             if (!componentsDirectoryExists) {
-                throw new Error(
-                    "This directory contains no 'Components' directory. Are you sure you are in the root of the project?",
-                );
+                throw new MissingDirectory("Components");
+            }
+
+            if (!configDirectoryExists) {
+                throw new MissingDirectory("Config");
             }
 
             const pages = await Filesystem.files(pagesDirectory);
