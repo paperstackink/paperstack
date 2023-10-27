@@ -37,7 +37,9 @@ export default class MakePage extends Command {
             path = `/Pages/${path}`;
         }
 
-        const isMarkdown = options.some(piece => piece.includes("--markdown"));
+        const isMarkdown = options.some(piece =>
+            ["--markdown", "--mds", "--md"].includes(piece),
+        );
 
         if (
             ![".stencil", ".markdown", ".md", ".mds"].some(extension =>
