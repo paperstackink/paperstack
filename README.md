@@ -16,6 +16,6 @@
   Static websites for the pragmatic programmer
 </p>
 
-## Documentation
-
-Visit [paperstack.ink](https://paperstack.ink/) for documentation!
+<p align="center">
+  <a href="https://paperstack.ink/">Documentation</a>
+</p>
