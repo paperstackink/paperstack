@@ -99,15 +99,15 @@ export default class Build extends Command {
             );
 
             if (!pagesDirectoryExists) {
-                throw new MissingDirectory("Pages");
+                throw new MissingDirectory("pages");
             }
 
             if (!componentsDirectoryExists) {
-                throw new MissingDirectory("Components");
+                throw new MissingDirectory("components");
             }
 
             if (!configDirectoryExists) {
-                throw new MissingDirectory("Config");
+                throw new MissingDirectory("config");
             }
 
             const pages = await Filesystem.files(pagesDirectory);
@@ -117,7 +117,7 @@ export default class Build extends Command {
 
             const pagesMappedToOutput = pages.map(file => {
                 const outputPath =
-                    file.name === "Index"
+                    file.name === "Index" || file.name === "index"
                         ? file.directory
                         : Path.buildPath(file.directory, file.name);
 
@@ -140,9 +140,11 @@ export default class Build extends Command {
                 const sourceFile = Path.subtract(
                     file.path,
                     pagesDirectory,
+                    "/",
                     ".",
                     fileExtension,
                 );
+
                 const urlPath = Path.subtract(
                     path,
                     outputDirectory,
@@ -163,16 +165,20 @@ export default class Build extends Command {
             });
 
             // Check whether there are files + folders that will result in duplicate pages
-            // I.e. Pages/Articles.stencil and Pages/Articles/Index.md
+            // I.e. pages/articles.stencil and pages/articles/index.md
             pagesMappedToOutput.forEach((page, index) => {
-                if (page.sourceFile.endsWith("Index")) {
+                if (
+                    page.sourceFile.endsWith("Index") ||
+                    page.sourceFile.endsWith("index")
+                ) {
                     return;
                 }
 
                 const conflict = pagesMappedToOutput.find(
                     (other, otherIndex) => {
                         const isIndexSourceFile =
-                            other.sourceFile === `${page.sourceFile}/Index`;
+                            other.sourceFile === `${page.sourceFile}/Index` ||
+                            other.sourceFile === `${page.sourceFile}/index`;
 
                         return isIndexSourceFile && index !== otherIndex;
                     },
@@ -181,8 +187,8 @@ export default class Build extends Command {
                 if (conflict) {
                     throw new DuplicatePagesFromFileAndFolderError(
                         page.urlPath,
-                        `Pages${page.sourceFile}.${page.sourceFileExtension}`,
-                        `Pages${conflict.sourceFile}.${conflict.sourceFileExtension}`,
+                        `pages/${page.sourceFile}.${page.sourceFileExtension}`,
+                        `pages/${conflict.sourceFile}.${conflict.sourceFileExtension}`,
                     );
                 }
             });
@@ -204,7 +210,7 @@ export default class Build extends Command {
                     pages[0].urlPath,
                     pages.map(
                         page =>
-                            `Pages${page.sourceFile}.${page.sourceFileExtension}`,
+                            `pages/${page.sourceFile}.${page.sourceFileExtension}`,
                     ),
                 );
             }
@@ -266,13 +272,11 @@ export default class Build extends Command {
                             .filter(piece => piece)
                             .pop() || "";
                     const name = item.sourceFile.split("/").pop();
-                    const nestedPath = item.sourceFile
-                        .replace("/", "")
-                        .replaceAll("/", ".");
+                    const nestedPath = item.sourceFile.replaceAll("/", ".");
 
                     const data: PageMap = await extractData(item.contents, {
                         language: item.sourceType,
-                        path: `Pages/${nestedPath}.${item.sourceFileExtension}`,
+                        path: `pages/${nestedPath}.${item.sourceFileExtension}`,
                     });
                     const page = new Map([...data]);
 
@@ -399,10 +403,10 @@ export default class Build extends Command {
                 const { pages, allPages, directories, allDirectories } =
                     getSubRecords(map);
 
-                map.set("pages", pages);
-                map.set("allPages", allPages);
-                map.set("directories", directories);
-                map.set("allDirectories", allDirectories);
+                map.set("$pages", pages);
+                map.set("$allPages", allPages);
+                map.set("$directories", directories);
+                map.set("$allDirectories", allDirectories);
 
                 return map;
             }
@@ -416,10 +420,10 @@ export default class Build extends Command {
                 allDirectories,
             } = getSubRecords($pages);
 
-            $pages.set("pages", pagesAlt);
-            $pages.set("allPages", allPages);
-            $pages.set("directories", directories);
-            $pages.set("allDirectories", allDirectories);
+            $pages.set("$pages", pagesAlt);
+            $pages.set("$allPages", allPages);
+            $pages.set("$directories", directories);
+            $pages.set("$allDirectories", allDirectories);
 
             $scope.set("$pages", $pages);
 
@@ -459,9 +463,7 @@ export default class Build extends Command {
             const promises = pagesMappedToOutput.map(async page => {
                 await Filesystem.createDirectory(page.directory);
 
-                const nestedPath = page.sourceFile
-                    .replace("/", "")
-                    .replaceAll("/", ".");
+                const nestedPath = page.sourceFile.replaceAll("/", ".");
 
                 const $page = get($pages, nestedPath)! as DirectoryMap;
 
@@ -486,7 +488,7 @@ export default class Build extends Command {
                     },
                     {
                         language: page.sourceType,
-                        path: `Pages/${nestedPath}.${page.sourceFileExtension}`,
+                        path: `pages/${nestedPath}.${page.sourceFileExtension}`,
                     },
                 );
 

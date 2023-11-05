@@ -8,31 +8,31 @@ export function getRootDirectory() {
 export function getOutputDirectory() {
     const root = getRootDirectory();
 
-    return buildPath(root, "Output");
+    return buildPath(root, "output");
 }
 
 export function getPagesDirectory() {
     const root = getRootDirectory();
 
-    return buildPath(root, "Pages");
+    return buildPath(root, "pages");
 }
 
 export function getComponentsDirectory() {
     const root = getRootDirectory();
 
-    return buildPath(root, "Components");
+    return buildPath(root, "components");
 }
 
 export function getConfigDirectory() {
     const root = getRootDirectory();
 
-    return buildPath(root, "Config");
+    return buildPath(root, "config");
 }
 
 export function getAssetsDirectory() {
     const root = getRootDirectory();
 
-    return buildPath(root, "Assets");
+    return buildPath(root, "assets");
 }
 
 export function getRelativePath(path: string): string {
