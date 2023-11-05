@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2023-11-05
+
+### Modified
+
+-   Changed all folders to lowercase
+-   Updated to `Stencil@0.6.0`
+
 ## [0.6.0] - 2023-10-27
 
 ### Fixed

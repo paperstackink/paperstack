@@ -15,7 +15,7 @@ async function startServer(port: string) {
         });
 
         return exec(
-            `./node_modules/.bin/http-server Output --port ${port} -c-1`,
+            `./node_modules/.bin/http-server output --port ${port} -c-1`,
         );
     } catch (error) {
         return null;
