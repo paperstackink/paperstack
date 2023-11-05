@@ -32,6 +32,14 @@ export default class MakeComponent extends Command {
             path = `${path}.stencil`;
         }
 
+        const name = path.split("/").pop();
+
+        if (name && name.charAt(0) !== name.charAt(0).toUpperCase()) {
+            const capitalisedName =
+                name.charAt(0).toUpperCase() + name.slice(1);
+            path = path.replace(name, capitalisedName);
+        }
+
         const relativePath = path;
 
         // Remove the first '/' so the path resolves inside the root folder
