@@ -19,22 +19,14 @@ export default class MakePage extends Command {
 
         let path = options[0];
 
-        // If it doesn't contain uppercase letters we assume it's the URL path
-        if (path === path.toLowerCase()) {
-            path = path
-                .split("/")
-                .map(piece => Strings.pascal(piece))
-                .join("/");
-        }
-
-        if (path.startsWith("/Pages")) {
+        if (path.startsWith("/pages")) {
             // Noop
-        } else if (path.startsWith("Pages")) {
+        } else if (path.startsWith("pages")) {
             path = `/${path}`;
         } else if (path.startsWith("/")) {
-            path = `/Pages${path}`;
+            path = `/pages${path}`;
         } else {
-            path = `/Pages/${path}`;
+            path = `/pages/${path}`;
         }
 
         const isMarkdown = options.some(piece =>
@@ -102,9 +94,11 @@ export default class MakePage extends Command {
 
         Terminal.write("Examples: ");
         Terminal.write(`   paper make:page /articles/how-to`);
-        Terminal.write(`   paper make:page Articles/HowTo`);
-        Terminal.write(`   paper make:page Articles/HowTo --layout=BaseLayout`);
-        Terminal.write(`   paper make:page Articles/HowTo --markdown`);
+        Terminal.write(`   paper make:page articles/HowTo`);
+        Terminal.write(
+            `   paper make:page articles/how-to --layout=BaseLayout`,
+        );
+        Terminal.write(`   paper make:page articles/how-to --markdown`);
     }
 
     getLayout(options: string[]): string | null {
