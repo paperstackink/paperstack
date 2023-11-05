@@ -18,14 +18,14 @@ export default class MakeComponent extends Command {
 
         let path = options[0];
 
-        if (path.startsWith("/Components")) {
+        if (path.startsWith("/components")) {
             // Noop
-        } else if (path.startsWith("Components")) {
+        } else if (path.startsWith("components")) {
             path = `/${path}`;
         } else if (path.startsWith("/")) {
-            path = `/Components${path}`;
+            path = `/components${path}`;
         } else {
-            path = `/Components/${path}`;
+            path = `/components/${path}`;
         }
 
         if (!path.endsWith(".stencil")) {
@@ -68,6 +68,7 @@ export default class MakeComponent extends Command {
         Terminal.line();
 
         Terminal.write("Examples: ");
-        Terminal.write(`   paper make:component UI/Button`);
+        Terminal.write(`   paper make:component Button`);
+        Terminal.write(`   paper make:component ui/Button`);
     }
 }
